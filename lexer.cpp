@@ -43,7 +43,6 @@ enum class TokenType {
     KW_LOAD,
     KW_STORE,
     KW_VOLATILE,
-    KW_GLOBAL_ADDR,
     KW_FIELD_ADDR,
     KW_ELEM_ADDR,
     KW_CALL,
@@ -115,6 +114,7 @@ enum class TokenType {
 
     TYPE_BOOL,
     TYPE_PTR,
+    TYPE_VOID,
 
     // Punctuation
     EQUAL,
@@ -602,6 +602,7 @@ Lexer::keyword_map_ = {
 
     {"bool", TokenType::TYPE_BOOL},
     {"ptr", TokenType::TYPE_PTR},
+    {"void", TokenType::TYPE_VOID},
 
     // Literals
     {"true", TokenType::TRUE_LITERAL},
