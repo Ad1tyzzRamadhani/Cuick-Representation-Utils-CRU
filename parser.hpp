@@ -1315,6 +1315,11 @@ private:
         node.result =
             std::move(result);
 
+        expect(
+            TokenType::DOT,
+            "Expected '.' before float comparison operator"
+        );
+
         node.op =
             parseCompareOp(
                 parseFloatCompareOperator()
@@ -1712,6 +1717,7 @@ private:
                 peek().value == "indirect"
             ) {
                 advance();
+                advance();
 
                 return parseIndirectCall(
                     std::move(result),
@@ -1745,6 +1751,7 @@ private:
                 check(TokenType::IDENTIFIER) &&
                 peek().value == "indirect"
             ) {
+                advance();
                 advance();
 
                 return parseIndirectCall(
