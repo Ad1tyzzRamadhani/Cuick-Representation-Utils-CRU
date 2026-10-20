@@ -1717,7 +1717,6 @@ private:
                 peek().value == "indirect"
             ) {
                 advance();
-                advance();
 
                 return parseIndirectCall(
                     std::move(result),
@@ -1751,7 +1750,6 @@ private:
                 check(TokenType::IDENTIFIER) &&
                 peek().value == "indirect"
             ) {
-                advance();
                 advance();
 
                 return parseIndirectCall(
