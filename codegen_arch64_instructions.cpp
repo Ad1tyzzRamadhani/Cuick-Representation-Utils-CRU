@@ -15,7 +15,6 @@
 #include <utility>
 
 namespace cru::codegen {
-namespace {
 
 using namespace ast;
 
