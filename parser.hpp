@@ -1721,9 +1721,9 @@ private:
                 );
             }
 
-            error(
+            /*error(
                 "Expected 'indirect' after 'call.'"
-            );
+            );*/
         }
 
         /*
@@ -1754,10 +1754,6 @@ private:
                     start
                 );
             }
-
-            error(
-                "Expected 'indirect' after 'call.'"
-            );
         }
 
         return parseDirectCall(
