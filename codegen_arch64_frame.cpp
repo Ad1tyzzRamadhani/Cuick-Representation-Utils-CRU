@@ -190,7 +190,7 @@ private:
                         return false;
 
                     const std::uint64_t requestedAlignment =
-                        inst.alignment == 0
+                        inst.alignment.has_value() 
                             ? layout->alignment
                             : inst.alignment;
 
