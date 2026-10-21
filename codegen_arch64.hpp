@@ -101,6 +101,19 @@ std::unordered_map<std::string, ast::Type> valueTypes;
 
 };
 
+bool emitAArch64Call(
+    AArch64Context& context,
+    const FunctionFrame& frame,
+    const std::vector<ast::Operand>& arguments,
+    const std::vector<ast::Type>& argumentTypes,
+    const ast::Type& returnType,
+    const std::optional<ast::ResultRef>& result,
+    const std::string* directSymbol,
+    const ast::Operand* indirectTarget,
+    std::string& out,
+    const ast::SourceLocation& location
+);
+
 std::optional<FunctionFrame> buildFunctionFrame(
     AArch64Context& context,
     const ast::Function& function
