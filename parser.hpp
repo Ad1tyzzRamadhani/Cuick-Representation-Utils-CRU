@@ -674,26 +674,31 @@ private:
         return node;
     }
 
-    // =========================================================
+        // =========================================================
     // Initializer
     // =========================================================
 
-    ast::Initializer Parser::parseInitializer() {
-    if (!match(TokenType::LBRACKET)) {
-        return ast::Initializer{parseLiteral()};
-    }
+    ast::Initializer parseInitializer() {
+        if (!match(TokenType::LBRACKET)) {
+            return ast::Initializer{parseLiteral()};
+        }
 
-    auto array = std::make_shared<ast::ArrayLiteral>();
+        auto array = std::make_shared<ast::ArrayLiteral>();
 
-    if (!check(TokenType::RBRACKET)) {
-        do {
-            array->elements.push_back(parseInitializer());
-        } while (match(TokenType::COMMA));
-    }
+        if (!check(TokenType::RBRACKET)) {
+            do {
+                array->elements.push_back(
+                    parseInitializer()
+                );
+            } while (match(TokenType::COMMA));
+        }
 
-    expect(TokenType::RBRACKET, "Expected ']' after array initializer");
+        expect(
+            TokenType::RBRACKET,
+            "Expected ']' after array initializer"
+        );
 
-    return ast::Initializer{std::move(array)};
+        return ast::Initializer{std::move(array)};
     }
 
     // =========================================================
