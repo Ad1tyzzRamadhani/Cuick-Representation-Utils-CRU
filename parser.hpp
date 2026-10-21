@@ -678,34 +678,22 @@ private:
     // Initializer
     // =========================================================
 
-    ast::Initializer parseInitializer() {
-        if (match(TokenType::LBRACKET)) {
-            ast::ArrayLiteral array;
+    ast::Initializer Parser::parseInitializer() {
+    if (!match(TokenType::LBRACKET)) {
+        return ast::Initializer{parseLiteral()};
+    }
 
-            if (!check(TokenType::RBRACKET)) {
-                array.elements.push_back(
-                    parseLiteral()
-                );
+    auto array = std::make_shared<ast::ArrayLiteral>();
 
-                while (match(TokenType::COMMA)) {
-                    if (check(TokenType::RBRACKET))
-                        break;
+    if (!check(TokenType::RBRACKET)) {
+        do {
+            array->elements.push_back(parseInitializer());
+        } while (match(TokenType::COMMA));
+    }
 
-                    array.elements.push_back(
-                        parseLiteral()
-                    );
-                }
-            }
+    expect(TokenType::RBRACKET, "Expected ']' after array initializer");
 
-            expect(
-                TokenType::RBRACKET,
-                "Expected ']' after array initializer"
-            );
-
-            return array;
-        }
-
-        return parseLiteral();
+    return ast::Initializer{std::move(array)};
     }
 
     // =========================================================
