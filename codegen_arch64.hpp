@@ -148,6 +148,17 @@ std::string normalizeName(std::string name) {
     return name;
 }
 
+struct CodegenResult {
+    bool success = false;
+    std::string assembly;
+    std::vector<Diagnostic> diagnostics;
+};
+
+CodegenResult codegenArch64(
+    const ast::Module& module,
+    const std::string& filename
+);
+
 } // namespace cru::codegen
 
 #endif
