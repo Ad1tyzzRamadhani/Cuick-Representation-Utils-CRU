@@ -851,6 +851,6 @@ bool emitAArch64Instruction(
                 return false;
             }
         },
-        instruction
+        instruction);
       }
 } // namespace
