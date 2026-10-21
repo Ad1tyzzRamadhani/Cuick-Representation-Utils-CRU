@@ -272,42 +272,78 @@ void SemanticAnalyzer::validateGlobal(
     if (!global.initializer)
         return;
 
-    const auto& init = *global.initializer;
+    const auto& initializer = *global.initializer;
 
-    if (const auto* literal = std::get_if<ast::Literal>(&init)) {
-        ast::Operand operand = *literal;
-        operandType(operand, literal->location, &global.type);
-        return;
-    }
+    auto validateInitializer =
+        [&](auto&& self,
+            const ast::Initializer& init,
+            const ast::Type& expectedType,
+            const ast::SourceLocation& location) -> void {
 
-    const auto* array = std::get_if<ast::ArrayLiteral>(&init);
-    if (!array)
-        return;
+        if (const auto* literal =
+                std::get_if<ast::Literal>(&init)) {
 
-    if (global.type.kind != ast::TypeKind::Array ||
-        !global.type.elementType) {
-        report(
-            global.location,
-            "Array initializer requires an array type"
-        );
-        return;
-    }
+            if (expectedType.kind == ast::TypeKind::Array) {
+                report(
+                    location,
+                    "Expected array initializer for array type"
+                );
+                return;
+            }
 
-    if (array->elements.size() > global.type.arraySize) {
-        report(
-            global.location,
-            "Too many elements in array initializer"
-        );
-    }
+            ast::Operand operand = *literal;
 
-    for (const auto& literal : array->elements) {
-        ast::Operand operand = literal;
-        operandType(
-            operand,
-            literal.location,
-            global.type.elementType.get()
-        );
-    }
+            operandType(
+                operand,
+                literal->location,
+                &expectedType
+            );
+
+            return;
+        }
+
+        const auto* arrayPtr =
+            std::get_if<
+                std::shared_ptr<ast::ArrayLiteral>
+            >(&init);
+
+        if (!arrayPtr || !*arrayPtr)
+            return;
+
+        if (expectedType.kind != ast::TypeKind::Array ||
+            !expectedType.elementType) {
+            report(
+                location,
+                "Array initializer requires an array type"
+            );
+            return;
+        }
+
+        const auto& array = **arrayPtr;
+
+        if (array.elements.size() > expectedType.arraySize) {
+            report(
+                location,
+                "Too many elements in array initializer"
+            );
+        }
+
+        for (const auto& element : array.elements) {
+            self(
+                self,
+                element,
+                *expectedType.elementType,
+                location
+            );
+        }
+    };
+
+    validateInitializer(
+        validateInitializer,
+        initializer,
+        global.type,
+        global.location
+    );
 }
 
 void SemanticAnalyzer::validateFunction(
