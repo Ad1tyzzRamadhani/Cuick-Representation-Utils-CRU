@@ -150,7 +150,7 @@ struct ArrayLiteral {
     std::vector<Literal> elements;
 };
 
-using Initializer = std::variant<Literal, ArrayLiteral>;
+using Initializer = std::variant<Literal, std::shared_ptr<ArrayLiteral>>;
 
 enum class GlobalKind {
     Mutable,
