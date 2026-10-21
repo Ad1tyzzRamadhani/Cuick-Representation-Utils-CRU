@@ -2,7 +2,7 @@
 #include "ast.hpp"
 #include "parser.hpp"
 #include "semantic.hpp"
-#include "semantic_types.cpp"
+#include "semantic_types.hpp"
 #include "semantic_instructions.cpp"
 #include "semantic.cpp"
 
