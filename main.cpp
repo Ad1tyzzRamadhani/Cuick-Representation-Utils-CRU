@@ -1,4 +1,3 @@
-#pragma once
 #include <fstream>
 #include "lexer.cpp"
 #include "ast.hpp"
