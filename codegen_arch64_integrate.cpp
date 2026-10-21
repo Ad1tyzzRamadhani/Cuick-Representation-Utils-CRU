@@ -162,9 +162,17 @@ bool emitFunction(
             }
         }
 
+        if (!block.terminator.has_value()) {
+            context.report(
+            block.location,
+            "basic block tidak memiliki terminator"
+            );
+            return false;
+        }
+
         if (!emitAArch64Terminator(
                 context, *frame, function, block.terminator,
-                body, block.location)) {
+                body, *block.location)) {
             return false;
         }
     }
