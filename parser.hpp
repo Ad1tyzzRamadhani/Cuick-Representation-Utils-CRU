@@ -1747,7 +1747,7 @@ private:
         advance(); // indirect
 
         return parseIndirectCall(
-            std::move(result),
+            std::nullopt,
             start
         );
         }
