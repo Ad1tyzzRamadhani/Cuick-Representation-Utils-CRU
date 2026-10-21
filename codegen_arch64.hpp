@@ -95,6 +95,10 @@ struct FunctionFrame {
 
     // Home slot untuk parameter fungsi.
     std::unordered_map<std::string, StackSlot> parameterSlots;
+
+    
+std::unordered_map<std::string, ast::Type> valueTypes;
+
 };
 
 std::optional<FunctionFrame> buildFunctionFrame(
