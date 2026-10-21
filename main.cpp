@@ -24,7 +24,7 @@ int main() {
   Lexer lexer(source, "main.cro");
   cru::Parser parser(lexer.tokenize());
   cru::sem::SemanticAnalyzer semantic;
-  semantic.analyze();
+  semantic.analyze(parser.parseModule());
     for (const auto& msg : semantic.diagnostics()) {
     std::cerr << msg.location.file << ":"
               << msg.location.line << ":"
