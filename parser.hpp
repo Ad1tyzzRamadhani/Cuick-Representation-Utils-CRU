@@ -1708,22 +1708,18 @@ private:
         /*
          * call.indirect...
          */
-        if (match(TokenType::DOT)) {
-            if (
-                check(TokenType::IDENTIFIER) &&
-                peek().value == "indirect"
-            ) {
-                advance();
+        if (
+        check(TokenType::DOT) &&
+        peek(1).type == TokenType::IDENTIFIER &&
+        peek(1).value == "indirect"
+    ) {
+        advance(); // .
+        advance(); // indirect
 
-                return parseIndirectCall(
-                    std::move(result),
-                    start
-                );
-            }
-
-            /*error(
-                "Expected 'indirect' after 'call.'"
-            );*/
+        return parseIndirectCall(
+            std::move(result),
+            start
+        );
         }
 
         /*
@@ -1742,18 +1738,18 @@ private:
                 "Expected 'call'"
             );
 
-        if (match(TokenType::DOT)) {
-            if (
-                check(TokenType::IDENTIFIER) &&
-                peek().value == "indirect"
-            ) {
-                advance();
+        if (
+        check(TokenType::DOT) &&
+        peek(1).type == TokenType::IDENTIFIER &&
+        peek(1).value == "indirect"
+    ) {
+        advance(); // .
+        advance(); // indirect
 
-                return parseIndirectCall(
-                    std::nullopt,
-                    start
-                );
-            }
+        return parseIndirectCall(
+            std::move(result),
+            start
+        );
         }
 
         return parseDirectCall(
