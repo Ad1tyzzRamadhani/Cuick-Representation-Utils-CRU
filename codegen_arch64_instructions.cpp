@@ -648,8 +648,11 @@ bool emitAArch64Instruction(
 
                 if (isFloat(src) && !isFloat(dst)) {
                     const auto dstReg = bitWidth(dst) == 32 ? "w11" : "x11";
-                    output += "\tfcvtzs " + dstReg + ", " +
-                              freg(0, src) + "\n";
+                    output += "\tfcvtzs "
+                    output += dstReg 
+                    output += ", " 
+                    output += freg(0, src) 
+                    output += "\n";
                     return emitStoreResult(
                         context, frame, inst.result, dst,
                         dstReg, output, location
@@ -686,7 +689,7 @@ bool emitAArch64Instruction(
                         output += "\tuxt" + std::to_string(dstWidth) +
                                   " " + dstReg + ", " + srcReg + "\n";
                     } else {
-                        output += "\tsxt" + std::to_string(dstWidth) +
+                        output = output + "\tsxt" + std::to_string(dstWidth) +
                                   " " + dstReg + ", " + srcReg + "\n";
                     }
                 } else {
