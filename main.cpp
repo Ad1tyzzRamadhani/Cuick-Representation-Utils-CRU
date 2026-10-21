@@ -8,13 +8,6 @@
 #include "semantic_instructions.cpp"
 #include "semantic.cpp"
 #include "codegen_arch64.hpp"
-#include "codegen_arch64.cpp"
-#include "codegen_arch64_globals.cpp"
-#include "codegen_arch64_instructions.cpp"
-#include "codegen_arch64_frame.cpp"
-#include "codegen_arch64_control.cpp"
-#include "codegen_arch64_abi.cpp"
-#include "codegen_arch64_integrate.cpp"
 
 namespace fs = std::filesystem;
 
