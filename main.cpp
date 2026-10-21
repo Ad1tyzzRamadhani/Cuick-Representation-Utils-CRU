@@ -1,3 +1,4 @@
+#include <fstream>
 #include "lexer.cpp"
 #include "ast.hpp"
 #include "parser.hpp"
