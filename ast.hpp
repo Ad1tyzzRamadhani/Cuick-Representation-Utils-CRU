@@ -146,11 +146,16 @@ struct UnionDecl : Node {
     std::vector<FieldDecl> fields;
 };
 
-struct ArrayLiteral {
-    std::vector<Literal> elements;
-};
+struct ArrayLiteral;
 
-using Initializer = std::variant<Literal, std::shared_ptr<ArrayLiteral>>;
+using Initializer = std::variant<
+    Literal,
+    std::shared_ptr<ArrayLiteral>
+>;
+
+struct ArrayLiteral {
+    std::vector<Initializer> elements;
+};
 
 enum class GlobalKind {
     Mutable,
