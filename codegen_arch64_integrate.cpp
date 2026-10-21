@@ -172,7 +172,7 @@ bool emitFunction(
 
         if (!emitAArch64Terminator(
                 context, *frame, function, block.terminator,
-                body, *block.location)) {
+                body, block.location)) {
             return false;
         }
     }
