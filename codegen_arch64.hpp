@@ -102,6 +102,14 @@ std::optional<FunctionFrame> buildFunctionFrame(
     const ast::Function& function
 );
 
+bool emitAArch64Instruction(
+    AArch64Context& context,
+    const FunctionFrame& frame,
+    const ast::Instruction& instruction,
+    std::string& output,
+    const ast::SourceLocation& location
+);
+
 
 } // namespace cru::codegen
 
