@@ -1,9 +1,6 @@
 #ifndef CRU_PARSER_HPP
 #define CRU_PARSER_HPP
 
-#include "ast.hpp"
-#include "lexer.hpp"
-
 #include <cstdint>
 #include <limits>
 #include <optional>
