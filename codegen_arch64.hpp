@@ -142,7 +142,11 @@ bool emitAArch64Terminator(
     const ast::SourceLocation& location
 );
 
-
+std::string normalizeName(std::string name) {
+    if (!name.empty() && name.front() == '%')
+        name.erase(name.begin());
+    return name;
+}
 
 } // namespace cru::codegen
 
