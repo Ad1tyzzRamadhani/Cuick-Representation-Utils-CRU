@@ -70,13 +70,13 @@ void SemanticAnalyzer::checkInstruction(
                     defineResult(*call.result, call.returnType);
             }, node);
         } else {
-            auto checkOperand = [&](const ast::Operand& operand,
+            auto operandType = [&](const ast::Operand& operand,
                                     const ast::Type* expected = nullptr) {
                 return operandType(operand, node.location, expected);
             };
 
             auto checkAddress = [&](const ast::Operand& address) {
-                auto type = checkOperand(address);
+                auto type = operandType(address);
 
                 if (type && !isPointer(*type))
                     report(
@@ -113,8 +113,8 @@ void SemanticAnalyzer::checkInstruction(
             defineResult(node.result, node.type);
         }
         else if constexpr (std::is_same_v<T, ast::BinaryInst>) {
-            checkOperand(node.lhs, &node.type);
-            checkOperand(node.rhs, &node.type);
+            operandType(node.lhs, &node.type);
+            operandType(node.rhs, &node.type);
 
             if (node.op == ast::BinaryOp::And ||
                 node.op == ast::BinaryOp::Or ||
