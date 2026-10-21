@@ -192,7 +192,7 @@ private:
                     const std::uint64_t requestedAlignment =
                         inst.alignment.has_value() 
                             ? layout->alignment
-                            : inst.alignment;
+                            : 1;
 
                     if (!isPowerOfTwo(requestedAlignment)) {
                         context_.report(location,
