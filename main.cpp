@@ -7,7 +7,6 @@
 #include "semantic_types.hpp"
 #include "semantic_instructions.cpp"
 #include "semantic.cpp"
-#include "codegen_arch64.hpp"
 
 namespace fs = std::filesystem;
 
@@ -36,9 +35,5 @@ int main() {
     }
     return 0;
   }
-  auto result = cru::codegen::codegenArch64(
-        module,
-        "program.s"
-    );
 
 }
