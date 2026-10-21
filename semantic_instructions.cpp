@@ -61,17 +61,22 @@ void SemanticAnalyzer::checkInstruction(
 ) {
     std::visit([&](const auto& node) {
         using T = std::decay_t<decltype(node)>;
+        
+            auto checkOperand = [&](const ast::Operand& operand,
+                                    const ast::Type* expected = nullptr) {
+                return operandType(operand, node.location, expected);
+            };
 
-        auto checkOperand = [&](const ast::Operand& operand,
-                                const ast::Type* expected = nullptr) {
-            return operandType(operand, node.location, expected);
-        };
+            auto checkAddress = [&](const ast::Operand& address) {
+                auto type = checkOperand(address);
 
-        auto checkAddress = [&](const ast::Operand& address) {
-            auto type = checkOperand(address);
-            if (type && !isPointer(*type))
-                report(node.location, "Memory address must have type ptr");
-        };
+                if (type && !isPointer(*type))
+                    report(
+                        node.location,
+                        "Memory address must have type ptr"
+                    );
+            };
+        
 
         if constexpr (std::is_same_v<T, ast::ConstantInst>) {
             validateType(node.type, node.location);
