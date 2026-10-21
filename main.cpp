@@ -19,11 +19,14 @@ std::string readFile(const fs::path& path) {
 int main() {
   std::string source = readFile("main.cro");
   Lexer lexer(source, "main.cro");
-  Parser parser(lexer.tokenize());
-  SemanticAnalyzer semantic;
+  cru::Parser parser(lexer.tokenize());
+  cru::sem::SemanticAnalyzer semantic;
   if(semantic.analyze(parser.parseModule())) {
-    for(auto& msg : semantic.diagnsotics()) {
-        std::cout << msg.message << "\n";
+    for (const auto& msg : semantic.diagnostics()) {
+    std::cerr << msg.location.file << ":"
+              << msg.location.line << ":"
+              << msg.location.column << ": "
+              << msg.message << '\n';
     }
   }
 }
