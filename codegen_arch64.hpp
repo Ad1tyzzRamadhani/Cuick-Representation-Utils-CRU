@@ -115,6 +115,22 @@ bool emitAArch64Instruction(
 );
 
 
+std::string aarch64BlockLabel(
+    const ast::Function& function,
+    const std::string& blockName
+);
+
+bool emitAArch64Terminator(
+    AArch64Context& context,
+    const FunctionFrame& frame,
+    const ast::Function& function,
+    const ast::Terminator& terminator,
+    std::string& output,
+    const ast::SourceLocation& location
+);
+
+
+
 } // namespace cru::codegen
 
 #endif
