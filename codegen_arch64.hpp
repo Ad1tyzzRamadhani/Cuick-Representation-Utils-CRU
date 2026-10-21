@@ -75,6 +75,34 @@ struct AArch64Context {
     bool emitGlobals();
 };
 
+
+struct StackSlot {
+    // Offset relatif terhadap x29; slot berada di [x29 - offset].
+    std::uint64_t offset = 0;
+    std::uint64_t size = 0;
+    std::uint64_t alignment = 1;
+};
+
+struct FunctionFrame {
+    // Ukuran alokasi setelah x29 dibentuk, dibulatkan ke 16 byte.
+    std::uint64_t frameSize = 0;
+
+    // Slot untuk nilai hasil instruksi SSA.
+    std::unordered_map<std::string, StackSlot> valueSlots;
+
+    // Storage objek yang dibuat oleh AllocaInst.
+    std::unordered_map<std::string, StackSlot> allocaObjects;
+
+    // Home slot untuk parameter fungsi.
+    std::unordered_map<std::string, StackSlot> parameterSlots;
+};
+
+std::optional<FunctionFrame> buildFunctionFrame(
+    AArch64Context& context,
+    const ast::Function& function
+);
+
+
 } // namespace cru::codegen
 
 #endif
