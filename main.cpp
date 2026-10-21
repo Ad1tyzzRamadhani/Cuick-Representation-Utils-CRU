@@ -6,6 +6,8 @@
 #include "semantic_instructions.cpp"
 #include "semantic.cpp"
 
+namespace fs = std::filesystem;
+
 std::string readFile(const fs::path& path) {
     std::ifstream file(path);
     if (!file) {
