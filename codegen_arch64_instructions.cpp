@@ -648,10 +648,10 @@ bool emitAArch64Instruction(
 
                 if (isFloat(src) && !isFloat(dst)) {
                     const auto dstReg = bitWidth(dst) == 32 ? "w11" : "x11";
-                    output += "\tfcvtzs "
-                    output += dstReg 
-                    output += ", " 
-                    output += freg(0, src) 
+                    output += "\tfcvtzs ";
+                    output += dstReg;
+                    output += ", ";
+                    output += freg(0, src);
                     output += "\n";
                     return emitStoreResult(
                         context, frame, inst.result, dst,
@@ -693,7 +693,7 @@ bool emitAArch64Instruction(
                                   " " + dstReg + ", " + srcReg + "\n";
                     }
                 } else {
-                    output += "\tmov " + dstReg + ", " + srcReg + "\n";
+                    output = output + "\tmov " + dstReg + ", " + srcReg + "\n";
                 }
 
                 return emitStoreResult(
