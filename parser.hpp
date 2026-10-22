@@ -1853,8 +1853,7 @@ private:
         }
 
         if (
-            peek(1).type != TokenType::DOT ||
-            peek(2).type != TokenType::IDENTIFIER
+            peek(1).type != TokenType::DOT
         ) {
             error(
                 "Expected atomic instruction suffix"
@@ -1881,8 +1880,7 @@ private:
 
     ast::Instruction parseAtomicInstruction() {
         if (
-            peek(1).type != TokenType::DOT ||
-            peek(2).type != TokenType::IDENTIFIER
+            peek(1).type != TokenType::DOT
         ) {
             error(
                 "Expected atomic instruction suffix"
@@ -2363,7 +2361,6 @@ private:
         );
 
         if (
-            !check(TokenType::IDENTIFIER) ||
             peek().value != value
         ) {
             error(
