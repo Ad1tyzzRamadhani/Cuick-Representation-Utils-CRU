@@ -1530,8 +1530,7 @@ private:
 
         if (
             check(TokenType::DOT) &&
-            peek(1).type == TokenType::IDENTIFIER &&
-            peek(1).value == "volatile"
+            peek(1).type == TokenType::KW_VOLATILE
         ) {
             advance();
             advance();
