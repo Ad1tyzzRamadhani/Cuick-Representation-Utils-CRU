@@ -150,6 +150,7 @@ std::uint64_t fieldOffset(
     const std::string& structName,
     std::uint64_t fieldIndex
 ) const {
+    if(structs.contains(structName)) {
     auto it = structs.find(structName);
    
     const auto& fields = it->second->fields;
@@ -184,6 +185,7 @@ std::uint64_t fieldOffset(
         offset += fieldLayout.size;
     }
 
+    if(unions.contains(structName)) {
     auto ui = unions.find(structName);
 
     if (ui != unions.end()) {
@@ -196,6 +198,7 @@ std::uint64_t fieldOffset(
         }
 
         return 0;
+    }
     }
     unsupported(
         "field offset for unknown struct/union '" + structName + "'"
