@@ -618,7 +618,51 @@ if (frameSize_ > 32760) {
     storeSlot("x9", slots_.at(x.result.name));
     }
     void emitOne(const LoadInst&) { unsupported("load"); }
-    void emitOne(const StoreInst&) { unsupported("store"); }
+    void emitOne(const StoreInst& x) {
+    if (!isIntegerLike(x.type)) {
+        unsupported("store for type " + typeName(x.type));
+    }
+
+    // x9 = nilai yang akan disimpan.
+    const bool narrow = bitWidth(x.type) <= 32;
+    loadOperand(
+        x.value,
+        narrow ? "w9" : "x9",
+        x.type
+    );
+
+    // x10 = alamat tujuan.
+    loadOperand(
+        x.address,
+        "x10",
+        Type(TypeKind::Ptr)
+    );
+
+    // Pilih instruksi store berdasarkan ukuran tipe.
+    switch (layouts_.layout(x.type).size) {
+    case 1:
+        os() << "    strb w9, [x10]\n";
+        break;
+
+    case 2:
+        os() << "    strh w9, [x10]\n";
+        break;
+
+    case 4:
+        os() << "    str w9, [x10]\n";
+        break;
+
+    case 8:
+        os() << "    str x9, [x10]\n";
+        break;
+
+    default:
+        unsupported(
+            "store with unsupported size for type " +
+            typeName(x.type)
+        );
+    }
+    }
     void emitOne(const GlobalAddrInst&) { unsupported("global.addr"); }
     void emitOne(const FieldAddrInst& x) {
         const std::uint64_t offset =
