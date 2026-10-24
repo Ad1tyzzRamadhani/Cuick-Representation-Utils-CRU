@@ -151,8 +151,9 @@ std::uint64_t fieldOffset(
     std::uint64_t fieldIndex
 ) const {
     auto it = structs.find(structName);
+    auto ui = unions.find(structName);
 
-    if (it == structs.end()) {
+    if (it == structs.end() && ui == unions.end()) {
         unsupported("field offset for unknown struct '" + structName + "'");
     }
 
