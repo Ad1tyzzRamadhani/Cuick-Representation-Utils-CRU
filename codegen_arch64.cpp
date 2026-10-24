@@ -574,7 +574,119 @@ private:
             unsupported("invalid memory ordering for atomic.store");
         }
     }
-    void emitOne(const AtomicRMWInst&) { unsupported("atomic.rmw"); }
+    void emitOne(const AtomicRMWInst& x) {
+    if (!isIntegerLike(x.type) ||
+        x.type.kind == TypeKind::Bool ||
+        x.type.kind == TypeKind::Ptr) {
+        unsupported("atomic.rmw for type " + typeName(x.type));
+    }
+
+    const unsigned width = bitWidth(x.type);
+
+    if (width != 32 && width != 64) {
+        unsupported(
+            "atomic.rmw currently supports only 32-bit and 64-bit integers"
+        );
+    }
+
+    const bool narrow = width == 32;
+
+    const std::string oldReg = narrow ? "w9" : "x9";
+    const std::string valueReg = narrow ? "w11" : "x11";
+    const std::string newReg = narrow ? "w14" : "x14";
+
+    const std::string retryLabel =
+        localLabel("rmw_retry_" + x.result.name);
+    const std::string doneLabel =
+        localLabel("rmw_done_" + x.result.name);
+
+    // x13 holds the address throughout the exclusive loop.
+    loadOperand(x.address, "x13", Type(TypeKind::Ptr));
+    loadOperand(x.value, valueReg, x.type);
+
+    bool acquire = false;
+    bool release = false;
+    bool seqCst = false;
+
+    switch (x.ordering) {
+    case MemoryOrdering::Relaxed:
+        break;
+
+    case MemoryOrdering::Acquire:
+        acquire = true;
+        break;
+
+    case MemoryOrdering::Release:
+        release = true;
+        break;
+
+    case MemoryOrdering::AcqRel:
+        acquire = true;
+        release = true;
+        break;
+
+    case MemoryOrdering::SeqCst:
+        acquire = true;
+        release = true;
+        seqCst = true;
+        break;
+    }
+
+    if (seqCst)
+        os() << "    dmb ish\n";
+
+    os() << retryLabel << ":\n";
+
+    os() << "    "
+         << (acquire ? "ldaxr " : "ldxr ")
+         << oldReg << ", [x13]\n";
+
+    switch (x.op) {
+    case RMWOp::Add:
+        os() << "    add " << newReg << ", "
+             << oldReg << ", " << valueReg << "\n";
+        break;
+
+    case RMWOp::Sub:
+        os() << "    sub " << newReg << ", "
+             << oldReg << ", " << valueReg << "\n";
+        break;
+
+    case RMWOp::And:
+        os() << "    and " << newReg << ", "
+             << oldReg << ", " << valueReg << "\n";
+        break;
+
+    case RMWOp::Or:
+        os() << "    orr " << newReg << ", "
+             << oldReg << ", " << valueReg << "\n";
+        break;
+
+    case RMWOp::Xor:
+        os() << "    eor " << newReg << ", "
+             << oldReg << ", " << valueReg << "\n";
+        break;
+
+    case RMWOp::Xchg:
+        os() << "    mov " << newReg << ", "
+             << valueReg << "\n";
+        break;
+    }
+
+    os() << "    st"
+         << (release ? "lxr " : "xr ")
+         << "w15, " << newReg << ", [x13]\n";
+
+    os() << "    cbnz w15, " << retryLabel << "\n";
+
+    if (seqCst)
+        os() << "    dmb ish\n";
+
+    os() << doneLabel << ":\n";
+
+    // Atomic RMW returns the value observed before the update.
+    storeSlot(oldReg, slots_.at(x.result.name));
+    }
     void emitOne(const AtomicCASInst&) { unsupported("atomic.cas"); }
 
     void emitOne(const CallInst&) { unsupported("function call"); }
