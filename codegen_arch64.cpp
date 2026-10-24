@@ -146,6 +146,51 @@ struct LayoutEngine {
     }
 };
 
+std::uint64_t fieldOffset(
+    const std::string& structName,
+    std::uint64_t fieldIndex
+) const {
+    auto it = structs.find(structName);
+
+    if (it == structs.end()) {
+        unsupported("field offset for unknown struct '" + structName + "'");
+    }
+
+    const auto& fields = it->second->fields;
+
+    if (fieldIndex >= fields.size()) {
+        unsupported(
+            "field index " + std::to_string(fieldIndex) +
+            " out of bounds for struct '" + structName + "'"
+        );
+    }
+
+    std::uint64_t offset = 0;
+
+    for (std::uint64_t i = 0; i <= fieldIndex; ++i) {
+        const auto& field = fields[i];
+        const auto fieldLayout = layout(field.type);
+
+        std::uint64_t alignment = field.alignment
+            ? field.alignment->value
+            : fieldLayout.alignment;
+
+        if (alignment == 0) {
+            alignment = fieldLayout.alignment;
+        }
+
+        offset = alignUp(offset, alignment);
+
+        if (i == fieldIndex) {
+            return offset;
+        }
+
+        offset += fieldLayout.size;
+    }
+
+    unsupported("failed to calculate field offset");
+}
+
 std::uint64_t parseIntegerText(const std::string& text) {
     if (text.empty()) throw std::runtime_error("AArch64 codegen: empty integer literal");
     bool neg = text[0] == '-';
@@ -507,7 +552,31 @@ private:
     void emitOne(const LoadInst&) { unsupported("load"); }
     void emitOne(const StoreInst&) { unsupported("store"); }
     void emitOne(const GlobalAddrInst&) { unsupported("global.addr"); }
-    void emitOne(const FieldAddrInst&) { unsupported("field.addr"); }
+    void emitOne(const FieldAddrInst& x) {
+        const std::uint64_t offset =
+            layouts_.fieldOffset(x.structName, x.fieldIndex);
+
+    // x.object harus berisi pointer ke objek struct.
+        loadOperand(
+        x.object,
+        "x9",
+        Type(TypeKind::Ptr)
+        );
+
+    // AArch64 ADD immediate mendukung offset sampai 4095
+    // tanpa shifted immediate.
+        if (offset != 0) {
+            if (offset <= 4095) {
+            os() << "    add x9, x9, #" << offset << "\n";
+            } else {
+            emitMoveImmediate("x10", offset);
+            os() << "    add x9, x9, x10\n";
+            }
+        }   
+
+    // Simpan alamat field sebagai hasil SSA bertipe ptr.
+        storeSlot("x9", slots_.at(x.result.name));
+    }
     void emitOne(const ElementAddrInst&) { unsupported("elem.addr"); }
     void emitOne(const AtomicLoadInst& x) {
         if (!isIntegerLike(x.type))
