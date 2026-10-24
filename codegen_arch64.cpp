@@ -460,11 +460,25 @@ private:
         case BinaryOp::Sub: os() << "    sub " << a << ", " << a << ", " << b << "\n"; break;
         case BinaryOp::Mul: os() << "    mul " << a << ", " << a << ", " << b << "\n"; break;
         case BinaryOp::Div: os() << "    " << (isSignedInteger(x.type) ? "sdiv " : "udiv ") << a << ", " << a << ", " << b << "\n"; break;
-        case BinaryOp::Rem:
-            os() << "    " << (isSignedInteger(x.type) ? "sdiv " : "udiv ") << a << ", " << a << ", " << b << "\n";
-            os() << "    msub " << a << ", " << a << ", " << b << ", " << (narrow ? "w9" : "x9") << "\n";
-            // Correct remainder sequence needs original dividend. Recompute it below is not possible now.
-            unsupported("remainder (implement after baseline arithmetic)");
+        
+        case BinaryOp::Rem: {
+            const std::string dividend = narrow ? "w11" : "x11";
+            const std::string quotient = narrow ? "w12" : "x12";
+
+            // Preserve the original dividend.
+            os() << "    mov " << dividend << ", " << a << "\n";
+
+            // quotient = dividend / divisor
+            os() << "    "
+                << (isSignedInteger(x.type) ? "sdiv " : "udiv ")
+                << quotient << ", " << a << ", " << b << "\n";
+
+            // remainder = dividend - quotient * divisor
+            os() << "    msub " << a << ", " << quotient
+                << ", " << b << ", " << dividend << "\n";
+            break;
+        }
+
         case BinaryOp::And: os() << "    and " << a << ", " << a << ", " << b << "\n"; break;
         case BinaryOp::Or: os() << "    orr " << a << ", " << a << ", " << b << "\n"; break;
         case BinaryOp::Xor: os() << "    eor " << a << ", " << a << ", " << b << "\n"; break;
