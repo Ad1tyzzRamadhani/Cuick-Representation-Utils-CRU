@@ -748,6 +748,37 @@ private:
         return header;
     }
 
+ast::SyscallInst parseSyscall(
+    std::optional<ast::ResultRef> result = std::nullopt
+) {
+    using namespace ast;
+
+    SyscallInst inst;
+    inst.location = location();
+
+    // Token IDENTIFIER dengan nilai "syscall".
+    expect(TokenType::IDENTIFIER, "syscall");
+
+    inst.result = std::move(result);
+    inst.resultType = parseDottedType();
+
+    // Nama syscall juga IDENTIFIER, bukan keyword.
+    inst.syscallName = expectIdentifier();
+
+    // Argumen bersifat opsional.
+    if (!check(TokenType::NEWLINE) &&
+        !check(TokenType::KW_END) &&
+        !check(TokenType::EOF_TOKEN)) {
+        inst.args.push_back(parseOperand());
+
+        while (match(TokenType::COMMA)) {
+            inst.args.push_back(parseOperand());
+        }
+    }
+
+    return inst;
+}
+
     // =========================================================
     // Parameter
     // =========================================================
@@ -895,6 +926,11 @@ private:
          * call
          * atomic.store
          */
+
+        if (check(TokenType::IDENTIFIER) &&
+    peek().value == "syscall") {
+    return parseSyscall();
+}
 
         if (!check(TokenType::RESULT)) {
             switch (peek().type) {
