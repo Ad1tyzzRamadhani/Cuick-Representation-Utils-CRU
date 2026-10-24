@@ -150,7 +150,7 @@ std::uint64_t fieldOffset(
     const std::string& structName,
     std::uint64_t fieldIndex
 ) const {
-    if(structs.count(structName) <= 0) {
+    if(!structs.empty() && structs.count(structName) <= 0) {
     auto it = structs.find(structName);
    
     const auto& fields = it->second->fields;
@@ -185,7 +185,7 @@ std::uint64_t fieldOffset(
         offset += fieldLayout.size;
     }
 
-    if(unions.count(structName) <= 0) {
+    if(!unions.empty() && unions.count(structName) <= 0) {
     auto ui = unions.find(structName);
 
     if (ui != unions.end()) {
