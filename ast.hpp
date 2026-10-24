@@ -213,6 +213,14 @@ enum class BinaryOp {
     And, Or, Xor, Shl, Shr
 };
 
+
+struct SyscallInst {
+    std::string result;
+    Type resultType;
+    Operand number;
+    std::vector<Operand> args;
+};
+
 struct BinaryInst : Node {
     ResultRef result;
     BinaryOp op = BinaryOp::Add;
