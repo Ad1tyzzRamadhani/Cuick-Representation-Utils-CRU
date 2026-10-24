@@ -216,6 +216,7 @@ enum class BinaryOp {
 
 struct SyscallInst {
     std::string result;
+    std::string syscallName;
     Type resultType;
     Operand number;
     std::vector<Operand> args;
