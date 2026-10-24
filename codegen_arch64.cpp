@@ -750,7 +750,24 @@ if (frameSize_ > 32760) {
         );
     }
     }
-    void emitOne(const GlobalAddrInst&) { unsupported("global.addr"); }
+    void emitOne(const GlobalAddrInst& x) {
+    if (globals_.find(x.globalName) == globals_.end()) {
+        unsupported(
+            "global.addr references unknown global '" +
+            x.globalName + "'"
+        );
+    }
+
+    // x9 = alamat global.
+    // ADRP mengambil alamat halaman; ADD mengambil offset
+    // simbol di dalam halaman tersebut.
+    os() << "    adrp x9, " << x.globalName << "\n";
+    os() << "    add x9, x9, :lo12:"
+         << x.globalName << "\n";
+
+    // Simpan alamat ke slot SSA hasil.
+    storeSlot("x9", slots_.at(x.result.name));
+    }
     void emitOne(const FieldAddrInst& x) {
         const std::uint64_t offset =
             layouts_.fieldOffset(x.structName, x.fieldIndex);
@@ -776,7 +793,43 @@ if (frameSize_ > 32760) {
     // Simpan alamat field sebagai hasil SSA bertipe ptr.
         storeSlot("x9", slots_.at(x.result.name));
     }
-    void emitOne(const ElementAddrInst&) { unsupported("elem.addr"); }
+    void emitOne(const ElementAddrInst& x) {
+    const TypeLayout elementLayout =
+        layouts_.layout(x.elementType);
+
+    const std::uint64_t elementSize = elementLayout.size;
+
+    // x10 = alamat dasar array.
+    loadOperand(
+        x.base,
+        "x10",
+        Type(TypeKind::Ptr)
+    );
+
+    // x11 = indeks elemen.
+    loadOperand(
+        x.index,
+        "x11",
+        Type(TypeKind::ISize)
+    );
+
+    // Offset byte = indeks * sizeof(element).
+    if (elementSize == 0) {
+        unsupported(
+            "element.addr with zero-sized element type '" +
+            typeName(x.elementType) + "'"
+        );
+    } else if (elementSize != 1) {
+        emitMoveImmediate("x12", elementSize);
+        os() << "    mul x11, x11, x12\n";
+    }
+
+    // x9 = base + offset.
+    os() << "    add x9, x10, x11\n";
+
+    // Simpan pointer hasil.
+    storeSlot("x9", slots_.at(x.result.name));
+    }
     void emitOne(const AtomicLoadInst& x) {
         if (!isIntegerLike(x.type))
             unsupported("atomic.load for type " + typeName(x.type));
