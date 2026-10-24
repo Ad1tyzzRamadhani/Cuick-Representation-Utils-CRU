@@ -35,4 +35,9 @@ int main() {
     return 0;
   }
 
+    std::string assembly =
+        cru::codegen::codegenArch(std::move(module));
+
+    std::cout << assembly;
+
 }
