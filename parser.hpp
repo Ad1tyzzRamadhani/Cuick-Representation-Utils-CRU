@@ -747,44 +747,6 @@ private:
 
         return header;
     }
-
-ast::SyscallInst parseSyscall(
-    std::optional<ast::ResultRef> result = std::nullopt
-) {
-    using namespace ast;
-
-    const Token& start =
-        expect(
-            TokenType::IDENTIFIER,
-            "Expected 'syscall'"
-        );
-
-    if (start.value != "syscall") {
-        errorAt(start, "Expected 'syscall'");
-    }
-
-    SyscallInst inst;
-    inst.location = location(start);
-
-    // AST menyimpan nama hasil sebagai string.
-    inst.result = result
-        ? result->name
-        : std::string{};
-
-    // Contoh: syscall.i64 ...
-    inst.resultType = parseDottedType();
-
-    // Nomor syscall harus berupa operand.
-    inst.number = parseOperand();
-
-    // Argumen tambahan dipisahkan dengan koma.
-    while (match(TokenType::COMMA)) {
-        inst.args.push_back(parseOperand());
-    }
-
-    return inst;
-}
-
     // =========================================================
     // Parameter
     // =========================================================
@@ -975,11 +937,6 @@ ast::SyscallInst parseSyscall(
             TokenType::EQUAL,
             "Expected '=' after result"
         );
-
-        if (check(TokenType::IDENTIFIER) &&
-    peek().value == "syscall") {
-    return parseSyscall(std::move(result));
-}
 
         switch (peek().type) {
         case TokenType::KW_CONST:
