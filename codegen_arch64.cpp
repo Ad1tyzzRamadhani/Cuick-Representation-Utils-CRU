@@ -789,10 +789,6 @@ void saveCallResult(
     }
 
 void emitOne(const SyscallInst& x) {
-    if (x.syscallName.empty()) {
-        unsupported("syscall with empty name");
-    }
-
     if (x.args.size() > 6) {
         unsupported(
             "syscall '" + x.syscallName +
