@@ -509,7 +509,36 @@ private:
     void emitOne(const GlobalAddrInst&) { unsupported("global.addr"); }
     void emitOne(const FieldAddrInst&) { unsupported("field.addr"); }
     void emitOne(const ElementAddrInst&) { unsupported("elem.addr"); }
-    void emitOne(const AtomicLoadInst&) { unsupported("atomic.load"); }
+    void emitOne(const AtomicLoadInst& x) {
+        if (!isIntegerLike(x.type))
+            unsupported("atomic.load for type " + typeName(x.type));
+
+        const unsigned width = bitWidth(x.type);
+
+        if (width != 32 && width != 64)
+            unsupported("atomic.load currently supports only 32-bit and 64-bit integers");
+  
+        const std::string valueReg = width == 32 ? "w9" : "x9";
+
+        loadOperand(x.address, "x10", Type(TypeKind::Ptr));
+
+        switch (x.ordering) {
+            case MemoryOrdering::Relaxed:
+                os() << "    ldr " << valueReg << ", [x10]\n";
+                break;
+
+            case MemoryOrdering::Acquire:
+            case MemoryOrdering::SeqCst:
+                os() << "    ldar " << valueReg << ", [x10]\n";
+                break;
+
+            case MemoryOrdering::Release:
+            case MemoryOrdering::AcqRel:
+                unsupported("invalid memory ordering for atomic.load");
+        }
+
+        storeSlot(valueReg, slots_.at(x.result.name));
+    }
     void emitOne(const AtomicStoreInst&) { unsupported("atomic.store"); }
     void emitOne(const AtomicRMWInst&) { unsupported("atomic.rmw"); }
     void emitOne(const AtomicCASInst&) { unsupported("atomic.cas"); }
