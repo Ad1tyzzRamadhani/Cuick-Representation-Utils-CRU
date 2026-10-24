@@ -231,7 +231,11 @@ std::visit(
                 "Cannot assign the result of a void syscall"
             );
         } else {
-            defineResult(x.result, x.resultType);
+            if (!x.result.empty()) {
+    ast::ResultRef result;
+    result.name = x.result;
+    defineResult(result, x.resultType);
+            }
         }
     }
 },
