@@ -856,7 +856,7 @@ if (!x.result.empty() && x.resultType.kind == TypeKind::Void) {
 
     if (const auto* v = std::get_if<ast::Literal>(&x.number)) {
         try {
-            syscallNumber = std::stoull(v->text, nullptr, 0);
+            syscallNumbers = std::stoull(v->text, nullptr, 0);
         } catch (const std::exception&) {
             unsupported("Invalid syscall number");
         }
