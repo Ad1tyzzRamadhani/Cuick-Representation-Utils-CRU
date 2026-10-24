@@ -850,7 +850,7 @@ if (!x.result.empty() && x.resultType.kind == TypeKind::Void) {
             "Operand must be Number"
             );
        if(auto v = std::get_if<Literal>(&x.number)) {
-           it = v.text;
+           it = v->text;
        }
     }
 
