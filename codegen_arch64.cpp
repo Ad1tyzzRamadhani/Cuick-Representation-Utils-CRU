@@ -144,7 +144,7 @@ struct LayoutEngine {
         }
         unsupported("type layout");
     }
-};
+
 
 std::uint64_t fieldOffset(
     const std::string& structName,
@@ -190,6 +190,7 @@ std::uint64_t fieldOffset(
 
     unsupported("failed to calculate field offset");
 }
+};
 
 std::uint64_t parseIntegerText(const std::string& text) {
     if (text.empty()) throw std::runtime_error("AArch64 codegen: empty integer literal");
