@@ -753,27 +753,33 @@ ast::SyscallInst parseSyscall(
 ) {
     using namespace ast;
 
+    const Token& start =
+        expect(
+            TokenType::IDENTIFIER,
+            "Expected 'syscall'"
+        );
+
+    if (start.value != "syscall") {
+        errorAt(start, "Expected 'syscall'");
+    }
+
     SyscallInst inst;
-    inst.location = location();
+    inst.location = location(start);
 
-    // Token IDENTIFIER dengan nilai "syscall".
-    expect(TokenType::IDENTIFIER, "syscall");
+    // AST menyimpan nama hasil sebagai string.
+    inst.result = result
+        ? result->name
+        : std::string{};
 
-    inst.result = std::move(result);
+    // Contoh: syscall.i64 ...
     inst.resultType = parseDottedType();
 
-    // Nama syscall juga IDENTIFIER, bukan keyword.
-    inst.syscallName = expectIdentifier();
+    // Nomor syscall harus berupa operand.
+    inst.number = parseOperand();
 
-    // Argumen bersifat opsional.
-    if (!check(TokenType::NEWLINE) &&
-        !check(TokenType::KW_END) &&
-        !check(TokenType::EOF_TOKEN)) {
+    // Argumen tambahan dipisahkan dengan koma.
+    while (match(TokenType::COMMA)) {
         inst.args.push_back(parseOperand());
-
-        while (match(TokenType::COMMA)) {
-            inst.args.push_back(parseOperand());
-        }
     }
 
     return inst;
@@ -927,10 +933,7 @@ ast::SyscallInst parseSyscall(
          * atomic.store
          */
 
-        if (check(TokenType::IDENTIFIER) &&
-    peek().value == "syscall") {
-    return parseSyscall();
-}
+        
 
         if (!check(TokenType::RESULT)) {
             switch (peek().type) {
@@ -972,6 +975,11 @@ ast::SyscallInst parseSyscall(
             TokenType::EQUAL,
             "Expected '=' after result"
         );
+
+        if (check(TokenType::IDENTIFIER) &&
+    peek().value == "syscall") {
+    return parseSyscall(std::move(result));
+}
 
         switch (peek().type) {
         case TokenType::KW_CONST:
