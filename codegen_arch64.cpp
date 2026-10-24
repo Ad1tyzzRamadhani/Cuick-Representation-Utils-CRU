@@ -650,34 +650,9 @@ void storeFloatResult(
         unsupported("comparison operator");
     }
 
-    void emitInstruction(const Instruction& inst) {
-    std::visit(
-        [&](const auto& x) {
-            using T = std::decay_t<decltype(x)>;
-
-            if constexpr (
-                std::is_same_v<
-                    T,
-                    std::variant<
-                        ast::DirectCallInst,
-                        ast::IndirectCallInst
-                    >
-                >
-            ) {
-                std::visit(
-                    [&](const auto& call) {
-                        emitOne(call);
-                    },
-                    x
-                );
-            } else {
-                emitOne(x);
-            }
-        },
-        inst
-    );
+    void emitInstruction(const Instruction& ins) {
+        std::visit([&](const auto& x) { emitOne(x); }, ins);
     }
-
 void emitCallArguments(const std::vector<Operand>& arguments) {
     unsigned intReg = 0;
     unsigned fpReg = 0;
