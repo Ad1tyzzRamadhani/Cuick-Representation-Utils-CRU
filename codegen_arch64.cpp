@@ -783,6 +783,51 @@ void saveCallResult(
         storeSlot("w9", slots_.at(x.result.name));
     }
 
+void emitOne(const FloatCompareInst& x) {
+    if (!isScalarFloat(x.type)) {
+        unsupported(
+            "floating-point comparison for " +
+            typeName(x.type)
+        );
+    }
+
+    const std::string a = floatReg("0", x.type);
+    const std::string b = floatReg("1", x.type);
+
+    loadFloatOperand(x.lhs, a, x.type);
+    loadFloatOperand(x.rhs, b, x.type);
+
+    os() << "    fcmp " << a << ", " << b << "\n";
+
+    switch (x.op) {
+    case CompareOp::Eq:
+        os() << "    cset w9, eq\n";
+        break;
+
+    case CompareOp::Ne:
+        os() << "    cset w9, ne\n";
+        break;
+
+    case CompareOp::Lt:
+        os() << "    cset w9, mi\n";
+        break;
+
+    case CompareOp::Le:
+        os() << "    cset w9, ls\n";
+        break;
+
+    case CompareOp::Gt:
+        os() << "    cset w9, gt\n";
+        break;
+
+    case CompareOp::Ge:
+        os() << "    cset w9, ge\n";
+        break;
+    }
+
+    storeSlot("w9", slots_.at(x.result.name));
+}
+
     void emitOne(const FloatBinaryInst& x) {
     if (!isScalarFloat(x.type)) {
         unsupported(
