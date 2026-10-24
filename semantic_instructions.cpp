@@ -202,6 +202,10 @@ std::visit(
         // Constant
         // ------------------------------------------------
 
+
+        [this](const ast::SyscallInst& x) {
+            (void)x;
+        }
         [this, &getOperandType](
             const ast::ConstantInst& node
         ) {
