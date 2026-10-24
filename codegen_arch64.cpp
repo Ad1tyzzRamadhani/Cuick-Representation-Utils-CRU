@@ -188,6 +188,24 @@ std::uint64_t fieldOffset(
         offset += fieldLayout.size;
     }
 
+    auto ui = layouts_.unions.find(name);
+
+    if (ui != layouts_.unions.end()) {
+        const auto& u = *ui->second;
+
+        if (fieldIndex >= u.fields.size()) {
+            unsupported(
+                "field index out of range for union '" + name + "'"
+            );
+        }
+
+        return 0;
+    }
+
+    unsupported(
+        "field offset for unknown struct/union '" + name + "'"
+    );
+
     unsupported("failed to calculate field offset");
 }
 };
@@ -740,20 +758,20 @@ if (frameSize_ > 32760) {
     // x.object harus berisi pointer ke objek struct.
         loadOperand(
         x.object,
-        "x9",
+        "x10",
         Type(TypeKind::Ptr)
         );
 
     // AArch64 ADD immediate mendukung offset sampai 4095
     // tanpa shifted immediate.
-        if (offset != 0) {
-            if (offset <= 4095) {
-            os() << "    add x9, x9, #" << offset << "\n";
-            } else {
-            emitMoveImmediate("x10", offset);
-            os() << "    add x9, x9, x10\n";
-            }
-        }   
+        if (offset == 0) {
+        os() << "    mov x9, x10\n";
+    } else if (offset <= 4095) {
+        os() << "    add x9, x10, #" << offset << "\n";
+    } else {
+        emitMoveImmediate("x9", offset);
+        os() << "    add x9, x10, x9\n";
+        }
 
     // Simpan alamat field sebagai hasil SSA bertipe ptr.
         storeSlot("x9", slots_.at(x.result.name));
