@@ -842,6 +842,14 @@ if (!x.result.empty() && x.resultType.kind == TypeKind::Void) {
             {"mmap", 222}
         };
 
+    const auto it = syscallNumbers.find(x.syscallName);
+
+    if (it == syscallNumbers.end()) {
+        it = x.number;
+    }
+
+    emitMoveImmediate("x8", it->second);
+
     emitMoveImmediate("x8", it->second);
 
     os() << "    svc #0\n";
