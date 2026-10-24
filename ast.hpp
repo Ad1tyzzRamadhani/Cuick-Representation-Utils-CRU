@@ -408,8 +408,7 @@ using Instruction = std::variant<
     AtomicLoadInst,
     AtomicStoreInst,
     AtomicRMWInst,
-    AtomicCASInst, 
-    SyscallInst
+    AtomicCASInst
 >;
 
 // ============================================================
