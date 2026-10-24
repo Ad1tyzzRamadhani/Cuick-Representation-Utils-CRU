@@ -452,21 +452,37 @@ if (frameSize_ > 32760) {
         (void)narrow;
     }
 
-    void emitMoveImmediate(const std::string& reg, std::uint64_t value) {
-        bool first = true;
-        for (unsigned shift = 0; shift < 64; shift += 16) {
-            std::uint16_t part = static_cast<std::uint16_t>((value >> shift) & 0xffffu);
-            if (part != 0 || first || shift == 48) {
-                if (first) {
-                    os() << "    movz " << reg << ", #" << part;
-                    if (shift) os() << ", lsl #" << shift;
-                    os() << "\n";
-                    first = false;
-                } else {
-                    os() << "    movk " << reg << ", #" << part << ", lsl #" << shift << "\n";
+    void emitMoveImmediate(
+    const std::string& reg,
+    std::uint64_t value
+) {
+    const bool isW = !reg.empty() && reg[0] == 'w';
+    const unsigned maxShift = isW ? 32 : 64;
+
+    bool first = true;
+
+    for (unsigned shift = 0; shift < maxShift; shift += 16) {
+        const std::uint16_t part =
+            static_cast<std::uint16_t>(
+                (value >> shift) & 0xffffu
+            );
+
+        if (part != 0 || first) {
+            if (first) {
+                os() << "    movz " << reg << ", #" << part;
+
+                if (shift != 0) {
+                    os() << ", lsl #" << shift;
                 }
+
+                os() << "\n";
+                first = false;
+            } else {
+                os() << "    movk " << reg << ", #" << part
+                     << ", lsl #" << shift << "\n";
             }
         }
+    }
     }
 
     const Type& operandType(const Operand& op) {
