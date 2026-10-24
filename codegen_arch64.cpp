@@ -1,6 +1,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <cstdint>
 #include <iomanip>
 #include <limits>
@@ -459,6 +460,103 @@ if (frameSize_ > 32760) {
                t.kind == TypeKind::Bool;
     }
 
+Type inferOperandType(const Operand& op) {
+    if (const auto* r = std::get_if<ResultRef>(&op)) {
+        auto it = valueTypes_.find(r->name);
+        if (it == valueTypes_.end()) {
+            unsupported("unknown SSA value %" + r->name);
+        }
+        return it->second;
+    }
+
+    const auto& lit = std::get<Literal>(op);
+
+    switch (lit.kind) {
+    case LiteralKind::Integer:
+        return Type(TypeKind::I64);
+    case LiteralKind::Float:
+        return Type(TypeKind::F64);
+    case LiteralKind::Boolean:
+        return Type(TypeKind::Bool);
+    case LiteralKind::Null:
+        return Type(TypeKind::Ptr);
+    }
+
+    unsupported("cannot infer operand type");
+}
+
+    bool isFloat32(const Type& t) const {
+    return t.kind == TypeKind::F32;
+}
+
+bool isFloat64(const Type& t) const {
+    return t.kind == TypeKind::F64;
+}
+
+bool isScalarFloat(const Type& t) const {
+    return isFloat32(t) || isFloat64(t);
+}
+
+std::string floatReg(const std::string& n, const Type& t) const {
+    return std::string(isFloat32(t) ? "s" : "d") + n;
+}
+
+void loadFloatOperand(
+    const Operand& op,
+    const std::string& freg,
+    const Type& type
+) {
+    if (!isScalarFloat(type)) {
+        unsupported("expected f32/f64 operand, got " + typeName(type));
+    }
+
+    const bool single = isFloat32(type);
+    const std::string wreg = single ? "w9" : "x9";
+
+    if (const auto* r = std::get_if<ResultRef>(&op)) {
+        auto it = slots_.find(r->name);
+        if (it == slots_.end()) {
+            unsupported("unknown SSA value %" + r->name);
+        }
+
+        loadSlot(wreg, it->second);
+        os() << "    fmov " << freg << ", " << wreg << "\n";
+        return;
+    }
+
+    const auto& lit = std::get<Literal>(op);
+
+    if (lit.kind != LiteralKind::Float) {
+        unsupported(
+            "non-floating literal used as " + typeName(type)
+        );
+    }
+
+    if (single) {
+        const float value = std::stof(lit.text);
+        std::uint32_t bits = 0;
+        std::memcpy(&bits, &value, sizeof(bits));
+        emitMoveImmediate("w9", bits);
+        os() << "    fmov " << freg << ", w9\n";
+    } else {
+        const double value = std::stod(lit.text);
+        std::uint64_t bits = 0;
+        std::memcpy(&bits, &value, sizeof(bits));
+        emitMoveImmediate("x9", bits);
+        os() << "    fmov " << freg << ", x9\n";
+    }
+}
+
+void storeFloatResult(
+    const std::string& freg,
+    const Type& type,
+    std::uint64_t offset
+) {
+    const std::string reg = isFloat32(type) ? "w9" : "x9";
+    os() << "    fmov " << reg << ", " << freg << "\n";
+    storeSlot(reg, offset);
+}
+
     void loadSlot(const std::string& reg, std::uint64_t off, bool narrow = false) {
         // All stack slots are 8-byte aligned; slot offsets are relative to sp.
         os() << "    ldr " << reg << ", [sp, #" << off << "]\n";
@@ -550,6 +648,67 @@ if (frameSize_ > 32760) {
         std::visit([&](const auto& x) { emitOne(x); }, ins);
     }
 
+void emitCallArguments(const std::vector<Operand>& arguments) {
+    unsigned intReg = 0;
+    unsigned fpReg = 0;
+
+    for (const auto& arg : arguments) {
+        const Type type = inferOperandType(arg);
+
+        if (isScalarFloat(type)) {
+            if (fpReg >= 8) {
+                unsupported(
+                    "more than 8 floating-point call arguments "
+                    "(stack argument ABI is not implemented)"
+                );
+            }
+
+            loadFloatOperand(arg, floatReg(std::to_string(fpReg), type), type);
+            ++fpReg;
+        } else if (isIntegerLike(type)) {
+            if (intReg >= 8) {
+                unsupported(
+                    "more than 8 integer/pointer call arguments "
+                    "(stack argument ABI is not implemented)"
+                );
+            }
+
+            const std::string reg =
+                (bitWidth(type) <= 32 ? "w" : "x") +
+                std::to_string(intReg);
+
+            loadOperand(arg, reg, type);
+            ++intReg;
+        } else {
+            unsupported(
+                "call argument type " + typeName(type)
+            );
+        }
+    }
+}
+
+void saveCallResult(
+    const std::optional<ResultRef>& result,
+    const Type& returnType
+) {
+    if (!result) return;
+
+    const auto offset = slots_.at(result->name);
+
+    if (isScalarFloat(returnType)) {
+        storeFloatResult(floatReg("0", returnType), returnType, offset);
+    } else if (isIntegerLike(returnType)) {
+        storeSlot(
+            is32(returnType) ? "w0" : "x0",
+            offset
+        );
+    } else {
+        unsupported(
+            "call result type " + typeName(returnType)
+        );
+    }
+}
+
     void emitOne(const ConstantInst& x) {
         if (!isIntegerLike(x.type)) unsupported("const for type " + typeName(x.type));
         loadOperand(Operand{x.value}, "x9", x.type);
@@ -624,9 +783,141 @@ if (frameSize_ > 32760) {
         storeSlot("w9", slots_.at(x.result.name));
     }
 
-    void emitOne(const FloatCompareInst&) { unsupported("floating-point comparison"); }
+    void emitOne(const FloatBinaryInst& x) {
+    if (!isScalarFloat(x.type)) {
+        unsupported(
+            "floating-point binary operation for " +
+            typeName(x.type)
+        );
+    }
+
+    const std::string a = floatReg("0", x.type);
+    const std::string b = floatReg("1", x.type);
+
+    loadFloatOperand(x.lhs, a, x.type);
+    loadFloatOperand(x.rhs, b, x.type);
+
+    switch (x.op) {
+    case FloatBinaryOp::Add:
+        os() << "    fadd " << a << ", " << a << ", " << b << "\n";
+        break;
+
+    case FloatBinaryOp::Sub:
+        os() << "    fsub " << a << ", " << a << ", " << b << "\n";
+        break;
+
+    case FloatBinaryOp::Mul:
+        os() << "    fmul " << a << ", " << a << ", " << b << "\n";
+        break;
+
+    case FloatBinaryOp::Div:
+        os() << "    fdiv " << a << ", " << a << ", " << b << "\n";
+        break;
+
+    case FloatBinaryOp::Rem:
+        unsupported(
+            "floating-point remainder: AArch64 has no direct frem instruction"
+        );
+    }
+
+    storeFloatResult(a, x.type, slots_.at(x.result.name));
+    }
     void emitOne(const FloatBinaryInst&) { unsupported("floating-point arithmetic"); }
-    void emitOne(const CastInst&) { unsupported("cast"); }
+    void emitOne(const CastInst& x) {
+    const Type src = inferOperandType(x.operand);
+    const Type& dst = x.targetType;
+
+    const auto resultOffset = slots_.at(x.result.name);
+
+    if (src.kind == dst.kind) {
+        if (isScalarFloat(dst)) {
+            loadFloatOperand(x.operand, floatReg("0", src), src);
+            storeFloatResult(floatReg("0", dst), dst, resultOffset);
+        } else if (isIntegerLike(dst)) {
+            loadOperand(x.operand, is32(dst) ? "w9" : "x9", src);
+            storeSlot(is32(dst) ? "w9" : "x9", resultOffset);
+        } else {
+            unsupported("cast from " + typeName(src) + " to " + typeName(dst));
+        }
+        return;
+    }
+
+    if (isScalarFloat(src) && isScalarFloat(dst)) {
+        loadFloatOperand(x.operand, floatReg("0", src), src);
+
+        os() << "    "
+             << (isFloat32(src) ? "fcvt d0, s0" : "fcvt s0, d0")
+             << "\n";
+
+        storeFloatResult(floatReg("0", dst), dst, resultOffset);
+        return;
+    }
+
+    if (isIntegerLike(src) && isScalarFloat(dst)) {
+        loadOperand(x.operand, is32(src) ? "w9" : "x9", src);
+
+        const std::string intReg = is32(src) ? "w9" : "x9";
+        const std::string fpReg = floatReg("0", dst);
+
+        os() << "    "
+             << (isSignedInteger(src) ? "scvtf " : "ucvtf ")
+             << fpReg << ", " << intReg << "\n";
+
+        storeFloatResult(fpReg, dst, resultOffset);
+        return;
+    }
+
+    if (isScalarFloat(src) && isIntegerLike(dst)) {
+        loadFloatOperand(x.operand, floatReg("0", src), src);
+
+        const std::string intReg = is32(dst) ? "w9" : "x9";
+        const std::string fpReg = floatReg("0", src);
+
+        os() << "    "
+             << (isSignedInteger(dst) ? "fcvtzs " : "fcvtzu ")
+             << intReg << ", " << fpReg << "\n";
+
+        storeSlot(intReg, resultOffset);
+        return;
+    }
+
+    if (isIntegerLike(src) && isIntegerLike(dst)) {
+        loadOperand(x.operand, "x9", src);
+
+        const unsigned srcBits = bitWidth(src);
+        const unsigned dstBits = bitWidth(dst);
+
+        if (dstBits < 64) {
+            const std::uint64_t mask = (std::uint64_t(1) << dstBits) - 1;
+            os() << "    and x9, x9, #"
+                 << mask << "\n";
+        }
+
+        if (dstBits == 64 && srcBits < 64 &&
+            isSignedInteger(src)) {
+            if (srcBits == 8)
+                os() << "    sxtb x9, w9\n";
+            else if (srcBits == 16)
+                os() << "    sxth x9, w9\n";
+            else if (srcBits == 32)
+                os() << "    sxtw x9, w9\n";
+        }
+
+        storeSlot(is32(dst) ? "w9" : "x9", resultOffset);
+        return;
+    }
+
+    if ((src.kind == TypeKind::Ptr && isIntegerLike(dst)) ||
+        (dst.kind == TypeKind::Ptr && isIntegerLike(src))) {
+        loadOperand(x.operand, "x9", src);
+        storeSlot("x9", resultOffset);
+        return;
+    }
+
+    unsupported(
+        "cast from " + typeName(src) + " to " + typeName(dst)
+    );
+    }
     void emitOne(const AllocaInst& x) {
         auto it = allocaOffsets_.find(x.result.name);
 
@@ -1094,8 +1385,48 @@ if (frameSize_ > 32760) {
     storeSlot(oldReg, slots_.at(x.oldValue.name));
     storeSlot("w16", slots_.at(x.success.name));
     }
-    void emitOne(const CallInst&) { unsupported("function call"); }
+    void emitOne(const CallInst& x) {
+    std::visit([&](const auto& call) {
+        using T = std::decay_t<decltype(call)>;
 
+        if constexpr (std::is_same_v<T, DirectCallInst>) {
+            if (functions_.find(call.functionName) == functions_.end()) {
+                unsupported(
+                    "call to unknown function '" +
+                    call.functionName + "'"
+                );
+            }
+
+            if (call.returnType.kind != TypeKind::Void &&
+                !call.result) {
+                unsupported(
+                    "non-void call without result for '" +
+                    call.functionName + "'"
+                );
+            }
+
+            emitCallArguments(call.arguments);
+
+            os() << "    bl " << call.functionName << "\n";
+
+            saveCallResult(call.result, call.returnType);
+        } else if constexpr (std::is_same_v<T, IndirectCallInst>) {
+            if (call.returnType.kind != TypeKind::Void &&
+                !call.result) {
+                unsupported("non-void indirect call without result");
+            }
+
+            // Muat alamat fungsi sebelum menyiapkan argumen.
+            loadOperand(call.function, "x16", Type(TypeKind::Ptr));
+
+            emitCallArguments(call.arguments);
+
+            os() << "    blr x16\n";
+
+            saveCallResult(call.result, call.returnType);
+        }
+    }, x);
+    }
     void emitTerminator(const Terminator& term) {
         std::visit([&](const auto& x) { emitTerm(x); }, term);
     }
@@ -1109,8 +1440,14 @@ if (frameSize_ > 32760) {
     void emitTerm(const ReturnTerminator& x) {
         if (x.value) {
             const Type& rt = currentFunction_->header.returnType;
-            if (!isIntegerLike(rt)) unsupported("return type " + typeName(rt));
+            if (isScalarFloat(rt)) {
+            loadFloatOperand(*x.value, floatReg("0", rt), rt);
+        } else if (isIntegerLike(rt)) {
             loadOperand(*x.value, is32(rt) ? "w0" : "x0", rt);
+        } else {
+            unsupported("return type " + typeName(rt));
+        }
+        }
         }
         emitEpilogue();
     }
