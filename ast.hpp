@@ -214,8 +214,7 @@ enum class BinaryOp {
 };
 
 
-struct SyscallInst {
-    SourceLocation location;
+struct SyscallInst : Node {
     std::string result;
     std::string syscallName;
     Type resultType;
