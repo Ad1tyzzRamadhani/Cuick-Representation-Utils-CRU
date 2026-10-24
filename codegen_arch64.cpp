@@ -844,14 +844,25 @@ if (!x.result.empty() && x.resultType.kind == TypeKind::Void) {
 
     const auto it = syscallNumbers.find(x.syscallName);
 
-    if (it == syscallNumbers.end()) {
-        if(std::holds_alternative<ResultRef>(x.number)) {
-            unsupported(
-            "Operand must be Number"
-            );
-       if(auto v = std::get_if<Literal>(&x.number)) {
-           it = std::stoi(v->text);
-       }
+    if (it != syscallNumbers.end()) {
+    // Nama syscall ditemukan di tabel.
+    syscallNumber = it->second;
+} else {
+    // Jika tidak ditemukan, coba ambil nomor langsung
+    // dari operand x.number.
+    if (std::holds_alternative<ast::ResultRef>(x.number)) {
+        unsupported("Syscall number must be a numeric literal");
+    }
+
+    if (const auto* v = std::get_if<ast::Literal>(&x.number)) {
+        try {
+            syscallNumber = std::stoull(v->text, nullptr, 0);
+        } catch (const std::exception&) {
+            unsupported("Invalid syscall number");
+        }
+    } else {
+        unsupported("Syscall number must be a numeric literal");
+    }
     }
 
     emitMoveImmediate("x8", it->second);
