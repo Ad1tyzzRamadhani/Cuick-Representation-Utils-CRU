@@ -185,6 +185,7 @@ std::uint64_t fieldOffset(
 
         offset += fieldLayout.size;
     }
+    }
 
     auto ui = unions.find(structName);
 
@@ -200,7 +201,7 @@ std::uint64_t fieldOffset(
 
         return 0;
     }
-    }
+  
     unsupported(
         "field offset for unknown struct/union '" + structName + "'"
     );
