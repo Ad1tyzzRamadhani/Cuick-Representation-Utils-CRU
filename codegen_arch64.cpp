@@ -188,9 +188,9 @@ std::uint64_t fieldOffset(
         offset += fieldLayout.size;
     }
 
-    auto ui = layouts_.unions.find(structName);
+    auto ui = unions.find(structName);
 
-    if (ui != layouts_.unions.end()) {
+    if (ui != unions.end()) {
         const auto& u = *ui->second;
 
         if (fieldIndex >= u.fields.size()) {
@@ -203,7 +203,7 @@ std::uint64_t fieldOffset(
     }
 
     unsupported(
-        "field offset for unknown struct/union '" + name + "'"
+        "field offset for unknown struct/union '" + structName + "'"
     );
 
     unsupported("failed to calculate field offset");
