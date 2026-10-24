@@ -326,7 +326,8 @@ private:
                           std::is_same_v<T, FieldAddrInst> ||
                           std::is_same_v<T, ElementAddrInst> ||
                           std::is_same_v<T, AtomicLoadInst> ||
-                          std::is_same_v<T, AtomicRMWInst>) {
+                          std::is_same_v<T, AtomicRMWInst> ||
+                          std::is_same_v<T, SyscallInst>){
                 if constexpr (std::is_same_v<T, ConstantInst>) allocateSlot(x.result, x.type);
                 else if constexpr (std::is_same_v<T, SyscallInst>) {
     if (!x.result.empty()) {
