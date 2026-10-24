@@ -539,7 +539,41 @@ private:
 
         storeSlot(valueReg, slots_.at(x.result.name));
     }
-    void emitOne(const AtomicStoreInst&) { unsupported("atomic.store"); }
+    void emitOne(const AtomicStoreInst& x) {
+        if (!isIntegerLike(x.type))
+            unsupported("atomic.store for type " + typeName(x.type));
+
+        const unsigned width = bitWidth(x.type);
+
+        if (width != 32 && width != 64)
+            unsupported(
+                "atomic.store currently supports only 32-bit and 64-bit integers"
+            );
+
+        const std::string valueReg = width == 32 ? "w9" : "x9";
+
+        loadOperand(x.value, valueReg, x.type);
+        loadOperand(x.address, "x10", Type(TypeKind::Ptr));
+
+        switch (x.ordering) {
+        case MemoryOrdering::Relaxed:
+            os() << "    str " << valueReg << ", [x10]\n";
+            break;
+
+        case MemoryOrdering::Release:
+            os() << "    stlr " << valueReg << ", [x10]\n";
+            break;
+
+        case MemoryOrdering::SeqCst:
+            unsupported(
+                "atomic.store seq_cst requires a sequential-consistency strategy"
+            );
+
+        case MemoryOrdering::Acquire:
+        case MemoryOrdering::AcqRel:
+            unsupported("invalid memory ordering for atomic.store");
+        }
+    }
     void emitOne(const AtomicRMWInst&) { unsupported("atomic.rmw"); }
     void emitOne(const AtomicCASInst&) { unsupported("atomic.cas"); }
 
