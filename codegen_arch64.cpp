@@ -822,7 +822,6 @@ void saveCallResult(
 
     storeFloatResult(a, x.type, slots_.at(x.result.name));
     }
-    void emitOne(const FloatBinaryInst&) { unsupported("floating-point arithmetic"); }
     void emitOne(const CastInst& x) {
     const Type src = inferOperandType(x.operand);
     const Type& dst = x.targetType;
@@ -1447,7 +1446,7 @@ void saveCallResult(
         } else {
             unsupported("return type " + typeName(rt));
         }
-        }
+        
         }
         emitEpilogue();
     }
