@@ -328,6 +328,11 @@ private:
                           std::is_same_v<T, AtomicLoadInst> ||
                           std::is_same_v<T, AtomicRMWInst>) {
                 if constexpr (std::is_same_v<T, ConstantInst>) allocateSlot(x.result, x.type);
+                else if constexpr (std::is_same_v<T, SyscallInst>) {
+    if (!x.result.empty()) {
+        allocateSlot(x.result, x.resultType);
+    }
+}
                 else if constexpr (std::is_same_v<T, UnaryInst>) allocateSlot(x.result, x.type);
                 else if constexpr (std::is_same_v<T, BinaryInst>) allocateSlot(x.result, x.type);
                 else if constexpr (std::is_same_v<T, CompareInst> || std::is_same_v<T, FloatCompareInst>) allocateSlot(x.result, Type(TypeKind::Bool));
@@ -855,20 +860,19 @@ if (!x.result.empty() && x.resultType.kind == TypeKind::Void) {
     os() << "    svc #0\n";
 
     // Linux syscall mengembalikan hasil di x0.
-    if (x.result) {
-        const auto offset = slots_.at(x.result->name);
+    if (!x.result.empty()) {
+    const auto offset = slots_.at(x.result);
 
-        if (isIntegerLike(x.resultType)) {
-            storeSlot(
-                is32(x.resultType) ? "w0" : "x0",
-                offset
-            );
-        } else {
-            unsupported(
-                "syscall result type " +
-                typeName(x.resultType)
-            );
-        }
+    if (isIntegerLike(x.resultType)) {
+        storeSlot(
+            is32(x.resultType) ? "w0" : "x0",
+            offset
+        );
+    } else {
+        throw std::runtime_error(
+            "tipe hasil syscall belum didukung"
+        );
+    }
     }
 }
 
