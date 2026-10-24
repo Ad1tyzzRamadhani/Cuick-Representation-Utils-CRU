@@ -795,19 +795,17 @@ void emitOne(const SyscallInst& x) {
         );
     }
 
-    if (x.resultType.kind != TypeKind::Void && !x.result) {
-        unsupported(
-            "non-void syscall '" + x.syscallName +
-            "' without result"
-        );
-    }
+    if (x.result.empty() && x.resultType.kind != TypeKind::Void) {
+    throw std::runtime_error(
+        "syscall non-void harus memiliki result"
+    );
+}
 
-    if (x.result && x.resultType.kind == TypeKind::Void) {
-        unsupported(
-            "void syscall '" + x.syscallName +
-            "' with result"
-        );
-    }
+if (!x.result.empty() && x.resultType.kind == TypeKind::Void) {
+    throw std::runtime_error(
+        "syscall void tidak boleh memiliki result"
+    );
+}
 
     // Linux AArch64: nomor syscall berada di x8.
     // Argumen syscall berada di x0 sampai x5.
