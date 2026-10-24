@@ -184,6 +184,8 @@ std::uint64_t fieldOffset(
         offset += fieldLayout.size;
     }
 
+    auto ui = unions.find(structName);
+
     if (ui != unions.end()) {
         const auto& u = *ui->second;
 
