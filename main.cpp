@@ -6,6 +6,7 @@
 #include "semantic_types.hpp"
 #include "semantic_instructions.cpp"
 #include "semantic.cpp"
+#include "codegen_arch64.cpp"
 
 namespace fs = std::filesystem;
 
