@@ -162,7 +162,9 @@ public:
             const std::size_t startColumn = column_;
             const char c = peek();
 
-            if (isIdentifierStart(c)) {
+            if (c == '@') {
+                escapedIdentifier();
+            } else if (isIdentifierStart(c)) {
                 identifier();
             } else if (std::isdigit(static_cast<unsigned char>(c))) {
                 number();
@@ -321,6 +323,33 @@ private:
             break;
         }
     }
+
+    void escapedIdentifier() {
+    const std::size_t start = pos_;
+    const std::size_t startLine = line_;
+    const std::size_t startColumn = column_;
+
+    advance(); // Skip '@'
+
+    if (!isIdentifierStart(peek())) {
+        errorAt(startLine, startColumn,
+                "Expected identifier after '@'");
+    }
+
+    const std::size_t nameStart = pos_;
+
+    while (isIdentifierContinue(peek())) {
+        advance();
+    }
+
+    tokens_.push_back({
+        TokenType::IDENTIFIER,
+        source_.substr(nameStart, pos_ - nameStart),
+        startLine,
+        startColumn,
+        filename_
+    });
+}
 
     void identifier() {
         const std::size_t start = pos_;
