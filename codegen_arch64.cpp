@@ -269,6 +269,7 @@ private:
     std::unordered_map<std::string, Type> valueTypes_;
     std::unordered_map<std::string, std::string> blockLabels_;
     std::unordered_map<std::string, bool> globals_;
+    std::unordered_map<std::string, std::uint64_t> allocaOffsets_;
     std::ostringstream out_;
     std::ostringstream* current_ = nullptr;
     const Function* currentFunction_ = nullptr;
@@ -343,10 +344,53 @@ private:
         for (const auto& b : f.blocks)
             for (const auto& i : b.instructions) discoverResult(i);
 
-        frameSize_ = alignUp(nextSlot_, 16);
-        if (frameSize_ > 32760)
-            unsupported("function stack frame larger than 32760 bytes");
+        allocaOffsets_.clear();
 
+std::uint64_t frameCursor = nextSlot_;
+
+for (const auto& block : f.blocks) {
+    for (const auto& instruction : block.instructions) {
+        const auto* alloca = std::get_if<AllocaInst>(&instruction);
+        if (!alloca) continue;
+
+        const auto layout = layouts_.layout(alloca->allocatedType);
+
+        std::uint64_t alignment = layout.alignment;
+        if (alloca->alignment) {
+            alignment = std::max(
+                alignment,
+                static_cast<std::uint64_t>(alloca->alignment->value)
+            );
+        }
+
+        if (alignment == 0 ||
+            (alignment & (alignment - 1)) != 0) {
+            unsupported("invalid alloca alignment");
+        }
+
+        frameCursor = alignUp(frameCursor, alignment);
+
+        // Simpan offset objek relatif terhadap SP setelah prolog.
+        allocaOffsets_[alloca->result.name] = frameCursor;
+
+        // Objek kosong tetap memperoleh ruang minimal 1 byte.
+        const std::uint64_t size = std::max<std::uint64_t>(
+            layout.size, 1
+        );
+
+        if (frameCursor > 32760 || size > 32760 - frameCursor) {
+            unsupported("function stack frame larger than 32760 bytes");
+        }
+
+        frameCursor += size;
+    }
+}
+
+frameSize_ = alignUp(frameCursor, 16);
+
+if (frameSize_ > 32760) {
+    unsupported("function stack frame larger than 32760 bytes");
+}
         std::ostringstream body;
         current_ = &body;
         os() << "\n.global " << f.header.name << "\n";
@@ -548,7 +592,30 @@ private:
     void emitOne(const FloatCompareInst&) { unsupported("floating-point comparison"); }
     void emitOne(const FloatBinaryInst&) { unsupported("floating-point arithmetic"); }
     void emitOne(const CastInst&) { unsupported("cast"); }
-    void emitOne(const AllocaInst&) { unsupported("alloca"); }
+    void emitOne(const AllocaInst& x) {
+    auto it = allocaOffsets_.find(x.result.name);
+
+    if (it == allocaOffsets_.end()) {
+        unsupported(
+            "missing stack allocation for %" + x.result.name
+        );
+    }
+
+    const std::uint64_t offset = it->second;
+
+    // Alamat objek = SP + offset.
+    if (offset == 0) {
+        os() << "    mov x9, sp\n";
+    } else if (offset <= 4095) {
+        os() << "    add x9, sp, #" << offset << "\n";
+    } else {
+        emitMoveImmediate("x9", offset);
+        os() << "    add x9, sp, x9\n";
+    }
+
+    // Simpan pointer hasil alloca ke slot SSA.
+    storeSlot("x9", slots_.at(x.result.name));
+    }
     void emitOne(const LoadInst&) { unsupported("load"); }
     void emitOne(const StoreInst&) { unsupported("store"); }
     void emitOne(const GlobalAddrInst&) { unsupported("global.addr"); }
