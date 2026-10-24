@@ -203,9 +203,38 @@ std::visit(
         // ------------------------------------------------
 
 
-        [this](const ast::SyscallInst& x) {
-            (void)x;
+        [this, &getOperandType](
+    const ast::SyscallInst& x
+) {
+    validateType(x.resultType, x.location);
+
+    const auto numberType = getOperandType(
+        x.number,
+        x.location
+    );
+
+    if (numberType && !isInteger(*numberType)) {
+        report(
+            x.location,
+            "Syscall number must have an integer type"
+        );
+    }
+
+    for (const auto& arg : x.args) {
+        getOperandType(arg, x.location);
+    }
+
+    if (!x.result.empty()) {
+        if (isVoid(x.resultType)) {
+            report(
+                x.location,
+                "Cannot assign the result of a void syscall"
+            );
+        } else {
+            defineResult(x.result, x.resultType);
         }
+    }
+},
         [this, &getOperandType](
             const ast::ConstantInst& node
         ) {
