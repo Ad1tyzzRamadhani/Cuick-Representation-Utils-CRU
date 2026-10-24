@@ -188,14 +188,14 @@ std::uint64_t fieldOffset(
         offset += fieldLayout.size;
     }
 
-    auto ui = layouts_.unions.find(name);
+    auto ui = layouts_.unions.find(structName);
 
     if (ui != layouts_.unions.end()) {
         const auto& u = *ui->second;
 
         if (fieldIndex >= u.fields.size()) {
             unsupported(
-                "field index out of range for union '" + name + "'"
+                "field index out of range for union '" + structName + "'"
             );
         }
 
