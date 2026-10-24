@@ -687,8 +687,92 @@ private:
     // Atomic RMW returns the value observed before the update.
     storeSlot(oldReg, slots_.at(x.result.name));
     }
-    void emitOne(const AtomicCASInst&) { unsupported("atomic.cas"); }
+    void emitOne(const AtomicCASInst& x) {
+    if (!isIntegerLike(x.type) ||
+        x.type.kind == TypeKind::Bool ||
+        x.type.kind == TypeKind::Ptr) {
+        unsupported("atomic.cas for type " + typeName(x.type));
+    }
 
+    const unsigned width = bitWidth(x.type);
+
+    if (width != 32 && width != 64) {
+        unsupported(
+            "atomic.cas currently supports only 32-bit and 64-bit integers"
+        );
+    }
+
+    const bool narrow = width == 32;
+
+    const std::string oldReg = narrow ? "w9" : "x9";
+    const std::string expectedReg = narrow ? "w11" : "x11";
+    const std::string desiredReg = narrow ? "w12" : "x12";
+
+    const std::string retryLabel =
+        localLabel("cas_retry_" + x.oldValue.name);
+    const std::string failedLabel =
+        localLabel("cas_failed_" + x.oldValue.name);
+    const std::string doneLabel =
+        localLabel("cas_done_" + x.oldValue.name);
+
+    loadOperand(x.address, "x13", Type(TypeKind::Ptr));
+    loadOperand(x.expected, expectedReg, x.type);
+    loadOperand(x.desired, desiredReg, x.type);
+
+    const bool successAcquire =
+        x.successOrdering == MemoryOrdering::Acquire ||
+        x.successOrdering == MemoryOrdering::AcqRel ||
+        x.successOrdering == MemoryOrdering::SeqCst;
+
+    const bool successRelease =
+        x.successOrdering == MemoryOrdering::Release ||
+        x.successOrdering == MemoryOrdering::AcqRel ||
+        x.successOrdering == MemoryOrdering::SeqCst;
+
+    const bool failureAcquire =
+        x.failureOrdering == FailureOrdering::Acquire ||
+        x.failureOrdering == FailureOrdering::SeqCst;
+
+    const bool seqCst =
+        x.successOrdering == MemoryOrdering::SeqCst ||
+        x.failureOrdering == FailureOrdering::SeqCst;
+
+    const bool useAcquire = successAcquire || failureAcquire;
+
+    if (seqCst)
+        os() << "    dmb ish\n";
+
+    os() << retryLabel << ":\n";
+
+    os() << "    "
+         << (useAcquire ? "ldaxr " : "ldxr ")
+         << oldReg << ", [x13]\n";
+
+    os() << "    cmp " << oldReg << ", " << expectedReg << "\n";
+    os() << "    b.ne " << failedLabel << "\n";
+
+    os() << "    "
+         << (successRelease ? "stlxr " : "stxr ")
+         << "w15, " << desiredReg << ", [x13]\n";
+
+    os() << "    cbnz w15, " << retryLabel << "\n";
+
+    // CAS succeeded.
+    os() << "    mov w16, #1\n";
+    os() << "    b " << doneLabel << "\n";
+
+    os() << failedLabel << ":\n";
+    os() << "    clrex\n";
+    os() << "    mov w16, #0\n";
+
+    os() << doneLabel << ":\n";
+
+    if (seqCst)
+        os() << "    dmb ish\n";
+
+    storeSlot(oldReg, slots_.at(x.oldValue.name));
+    storeSlot("w16", slots_.at(x.success.name));
+    }
     void emitOne(const CallInst&) { unsupported("function call"); }
 
     void emitTerminator(const Terminator& term) {
