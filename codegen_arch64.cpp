@@ -845,7 +845,13 @@ if (!x.result.empty() && x.resultType.kind == TypeKind::Void) {
     const auto it = syscallNumbers.find(x.syscallName);
 
     if (it == syscallNumbers.end()) {
-        it = x.number;
+        if(std::holds_alternative<ResultRef>(x.number)) {
+            unsupported(
+            "Operand must be Number"
+            );
+       if(auto v = std::get_if<Literal>(&x.number)) {
+           it = *v.text;
+       }
     }
 
     emitMoveImmediate("x8", it->second);
