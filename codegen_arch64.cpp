@@ -196,7 +196,7 @@ public:
             } else if (auto e = std::get_if<ExternDecl>(&d)) {
                 functions_[e->header.name] = FunctionInfo{nullptr, e, e->header.returnType};
             } else if (auto g = std::get_if<GlobalDecl>(&d)) {
-                globals_.insert(g->name);
+                globals_[g->name] = true;
             }
         }
     }
