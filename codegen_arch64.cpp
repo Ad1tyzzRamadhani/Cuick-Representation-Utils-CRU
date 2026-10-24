@@ -206,6 +206,7 @@ std::uint64_t fieldOffset(
 
     unsupported("failed to calculate field offset");
 }
+}
 };
 
 std::uint64_t parseIntegerText(const std::string& text) {
