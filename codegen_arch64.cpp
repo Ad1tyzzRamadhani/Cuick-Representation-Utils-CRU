@@ -783,6 +783,97 @@ void saveCallResult(
         storeSlot("w9", slots_.at(x.result.name));
     }
 
+void emitOne(const SyscallInst& x) {
+    if (x.syscallName.empty()) {
+        unsupported("syscall with empty name");
+    }
+
+    if (x.args.size() > 6) {
+        unsupported(
+            "syscall '" + x.syscallName +
+            "' with more than 6 arguments"
+        );
+    }
+
+    if (x.resultType.kind != TypeKind::Void && !x.result) {
+        unsupported(
+            "non-void syscall '" + x.syscallName +
+            "' without result"
+        );
+    }
+
+    if (x.result && x.resultType.kind == TypeKind::Void) {
+        unsupported(
+            "void syscall '" + x.syscallName +
+            "' with result"
+        );
+    }
+
+    // Linux AArch64: nomor syscall berada di x8.
+    // Argumen syscall berada di x0 sampai x5.
+    for (std::size_t i = 0; i < x.args.size(); ++i) {
+        const Type argType = inferOperandType(x.args[i]);
+
+        if (!isIntegerLike(argType)) {
+            unsupported(
+                "non-integer syscall argument of type " +
+                typeName(argType)
+            );
+        }
+
+        const std::string reg =
+            (bitWidth(argType) <= 32 ? "w" : "x") +
+            std::to_string(i);
+
+        loadOperand(x.args[i], reg, argType);
+    }
+
+    // Nama syscall dipetakan ke nomor syscall Linux AArch64.
+    static const std::unordered_map<std::string, std::uint64_t>
+        syscallNumbers = {
+            {"read", 63},
+            {"write", 64},
+            {"openat", 56},
+            {"close", 57},
+            {"exit", 93},
+            {"exit_group", 94},
+            {"getpid", 172},
+            {"brk", 214},
+            {"munmap", 215},
+            {"mmap", 222}
+        };
+
+    const auto it = syscallNumbers.find(x.syscallName);
+
+    if (it == syscallNumbers.end()) {
+        unsupported(
+            "unknown Linux AArch64 syscall '" +
+            x.syscallName + "'"
+        );
+    }
+
+    emitMoveImmediate("x8", it->second);
+
+    os() << "    svc #0\n";
+
+    // Linux syscall mengembalikan hasil di x0.
+    if (x.result) {
+        const auto offset = slots_.at(x.result->name);
+
+        if (isIntegerLike(x.resultType)) {
+            storeSlot(
+                is32(x.resultType) ? "w0" : "x0",
+                offset
+            );
+        } else {
+            unsupported(
+                "syscall result type " +
+                typeName(x.resultType)
+            );
+        }
+    }
+}
+
 void emitOne(const FloatCompareInst& x) {
     if (!isScalarFloat(x.type)) {
         unsupported(
