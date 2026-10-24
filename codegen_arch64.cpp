@@ -874,6 +874,8 @@ if (!x.result.empty() && x.resultType.kind == TypeKind::Void) {
             "tipe hasil syscall belum didukung"
         );
     }
+    
+    }
     }
 }
 
