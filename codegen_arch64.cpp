@@ -594,30 +594,83 @@ if (frameSize_ > 32760) {
     void emitOne(const FloatBinaryInst&) { unsupported("floating-point arithmetic"); }
     void emitOne(const CastInst&) { unsupported("cast"); }
     void emitOne(const AllocaInst& x) {
-    auto it = allocaOffsets_.find(x.result.name);
+        auto it = allocaOffsets_.find(x.result.name);
 
-    if (it == allocaOffsets_.end()) {
-        unsupported(
+        if (it == allocaOffsets_.end()) {
+            unsupported(
             "missing stack allocation for %" + x.result.name
-        );
-    }
+            );
+        }
 
-    const std::uint64_t offset = it->second;
+        const std::uint64_t offset = it->second;
 
     // Alamat objek = SP + offset.
-    if (offset == 0) {
+        if (offset == 0) {
         os() << "    mov x9, sp\n";
-    } else if (offset <= 4095) {
+        } else if (offset <= 4095) {
         os() << "    add x9, sp, #" << offset << "\n";
-    } else {
+        } else {
         emitMoveImmediate("x9", offset);
         os() << "    add x9, sp, x9\n";
-    }
+        }
 
     // Simpan pointer hasil alloca ke slot SSA.
-    storeSlot("x9", slots_.at(x.result.name));
+        storeSlot("x9", slots_.at(x.result.name));
     }
-    void emitOne(const LoadInst&) { unsupported("load"); }
+    void emitOne(const LoadInst& x) {
+        if (!isIntegerLike(x.type)) {
+        unsupported("load for type " + typeName(x.type));
+        }
+ 
+    // x10 = alamat memori yang akan dibaca.
+        loadOperand(
+        x.address,
+        "x10",
+        Type(TypeKind::Ptr)
+        );
+
+    // Muat data sesuai ukuran dan signedness tipe.
+        switch (x.type.kind) {
+        case TypeKind::I8:
+        os() << "    ldrsb w9, [x10]\n";
+        break;
+
+        case TypeKind::U8:
+        case TypeKind::Bool:
+        os() << "    ldrb w9, [x10]\n";
+        break;
+
+        case TypeKind::I16:
+        os() << "    ldrsh w9, [x10]\n";
+        break;
+
+        case TypeKind::U16:
+        os() << "    ldrh w9, [x10]\n";
+        break;
+
+        case TypeKind::I32:
+        case TypeKind::U32:
+        os() << "    ldr w9, [x10]\n";
+        break;
+
+        case TypeKind::I64:
+        case TypeKind::U64:
+        case TypeKind::ISize:
+        case TypeKind::USize:
+        case TypeKind::Ptr:
+        os() << "    ldr x9, [x10]\n";
+        break;
+
+        default:
+        unsupported("load for type " + typeName(x.type));
+        }
+
+    // Simpan hasil pembacaan ke slot SSA.
+        storeSlot(
+        bitWidth(x.type) <= 32 ? "w9" : "x9",
+        slots_.at(x.result.name)
+        );
+}
     void emitOne(const StoreInst& x) {
     if (!isIntegerLike(x.type)) {
         unsupported("store for type " + typeName(x.type));
