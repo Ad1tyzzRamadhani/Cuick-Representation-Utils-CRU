@@ -14,7 +14,8 @@ enum class TokenType {
     IDENTIFIER,
     RESULT,
     INTEGER_LITERAL,
-    FLOAT_LITERAL,
+    FLOAT_LITERAL, 
+    STRING,
 
     // Literals
     TRUE_LITERAL,
@@ -482,12 +483,15 @@ private:
             if (peek() == '"') {
                 advance();
 
-                // The current CRU grammar has no string literal
-                // production. Reject it instead of silently
-                // treating it as a valid Literal.
-                errorAt(startLine, startColumn,
-                        "String literals are not supported by "
-                        "the current CRU grammar");
+                tokens_.push_back({
+                TokenType::STRING,
+                text,
+                startLine,
+                startColumn,
+                filename_
+                });
+                return;
+
             }
 
             if (peek() == '\n') {
