@@ -15,7 +15,7 @@ enum class TokenType {
     RESULT,
     INTEGER_LITERAL,
     FLOAT_LITERAL, 
-    STRING,
+    STRING_LITERAL, 
 
     // Literals
     TRUE_LITERAL,
@@ -484,7 +484,7 @@ private:
                 advance();
 
                 tokens_.push_back({
-                TokenType::STRING,
+                TokenType::STRING_LITERAL,
                 text,
                 startLine,
                 startColumn,
