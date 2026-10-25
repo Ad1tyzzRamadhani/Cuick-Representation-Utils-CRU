@@ -1580,7 +1580,7 @@ void emitOne(const FloatCompareInst& x) {
                 } else if (lit->kind == LiteralKind::Null) {
                     os() << "    .zero " << l.size << "\n";
                 } else if (lit->kind == LiteralKind::String)  {
-                    os() << "    .asciz \"" << lit->text << "\"\n";
+                    os() << "    .asciz " << lit->text << "\n";
                 } else {
                     unsupported("floating-point global initializer");
                 }
