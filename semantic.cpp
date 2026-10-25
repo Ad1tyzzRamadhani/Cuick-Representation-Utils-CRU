@@ -489,6 +489,7 @@ std::optional<ast::Type> SemanticAnalyzer::operandType(
         inferred = ast::Type(ast::TypeKind::Bool);
         break;
 
+    case ast::LiteralKind::String:
     case ast::LiteralKind::Null:
         inferred = ast::Type(ast::TypeKind::Ptr);
         break;
