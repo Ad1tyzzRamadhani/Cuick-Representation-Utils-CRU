@@ -483,13 +483,8 @@ private:
             if (peek() == '"') {
                 advance();
 
-                tokens_.push_back({
-                TokenType::STRING_LITERAL,
-                text,
-                startLine,
-                startColumn,
-                filename_
-                });
+                emit(TokenType::STRING_LITERAL,
+                    start, startLine, startColumn);
                 return;
 
             }
