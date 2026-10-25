@@ -481,6 +481,7 @@ Type inferOperandType(const Operand& op) {
         return Type(TypeKind::F64);
     case LiteralKind::Boolean:
         return Type(TypeKind::Bool);
+    case LiteralKind::String:
     case LiteralKind::Null:
         return Type(TypeKind::Ptr);
     }
