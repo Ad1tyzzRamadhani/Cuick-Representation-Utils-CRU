@@ -221,9 +221,18 @@ std::visit(
         // Unary operations
         // ------------------------------------------------
 
-        [this](const ast::SyscallInst& node) {
-             report(node.location, "Syscall Semantic not implemented yet");
-        }, 
+                [this, &getOperandType](const ast::SyscallInst& node) {
+            validateType(node.resultType, node.location);
+            
+            // Validasi nomor syscall dan argumen-argumennya
+            getOperandType(node.number, node.location);
+            for (const auto& arg : node.args) {
+                getOperandType(arg, node.location);
+            }
+
+            defineResult(node.result, node.resultType);
+        },
+
         [this, &getOperandType](
             const ast::UnaryInst& node
         ) {
