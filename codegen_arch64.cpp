@@ -328,11 +328,11 @@ private:
                           std::is_same_v<T, AtomicLoadInst> ||
                           std::is_same_v<T, AtomicRMWInst> ||
                           std::is_same_v<T, AtomicCASInst> ||
-                          std::is_same_v<T, SyscallInst>){
+                          std::is_same_v<T, SyscallInst> ) {
                 if constexpr (std::is_same_v<T, ConstantInst>) allocateSlot(x.result, x.type);
                 else if constexpr (std::is_same_v<T, SyscallInst>) {
-                    if (!x.result.empty()) {
-                    allocateSlot(x.result, x.resultType);
+                    if (x.result.has_value()) {
+                    allocateSlot(*x.result, x.resultType);
                     }
                 }
                 else if constexpr (std::is_same_v<T, UnaryInst>) allocateSlot(x.result, x.type);
