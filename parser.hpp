@@ -886,6 +886,27 @@ private:
     // Instruction dispatcher
     // =========================================================
 
+        ast::SyscallInst parseSyscall(ast::ResultRef result) {
+        const Token& start = expect(TokenType::IDENTIFIER, "Expected 'syscall'");
+
+        ast::SyscallInst node;
+        node.location = location(start);
+        node.result = std::move(result);
+
+        // Contoh sintaks: %res = syscall.i64 64, %arg1, %arg2
+        node.resultType = parseDottedType();
+        node.number = parseOperand();
+
+        if (match(TokenType::COMMA)) {
+            do {
+                node.args.push_back(parseOperand());
+            } while (match(TokenType::COMMA));
+        }
+
+        return node;
+    }
+
+
     ast::Instruction parseInstruction() {
         /*
          * Instructions without result:
@@ -937,6 +958,9 @@ private:
             TokenType::EQUAL,
             "Expected '=' after result"
         );
+
+        if(peek().type == TokenType::IDENTIFIER &&
+           peek().value == "syscall") parseSyscall(result);
 
         switch (peek().type) {
         case TokenType::KW_CONST:
