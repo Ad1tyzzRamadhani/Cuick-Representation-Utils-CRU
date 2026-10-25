@@ -20,7 +20,7 @@ std::string readFile(const fs::path& path) {
     return buffer.str();
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   if (argc < 4) {
         printUsage(argv[0]);
         return 1;
