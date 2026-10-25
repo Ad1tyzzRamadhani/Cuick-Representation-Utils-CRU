@@ -1474,7 +1474,33 @@ void emitOne(const FloatCompareInst& x) {
     }, x);
     }
 
-    void emitOne(const SyscallInst& x) { unsupported("Syscall");}
+        void emitOne(const SyscallInst& x) {
+        // 1. Masukkan argumen ke register x0 - x5
+        unsigned regIdx = 0;
+        for (const auto& arg : x.args) {
+            if (regIdx > 5) {
+                unsupported("Too many arguments for syscall (max 6)");
+            }
+            std::string reg = "x" + std::to_string(regIdx);
+            loadOperand(arg, reg, Type(TypeKind::I64));
+            ++regIdx;
+        }
+
+        // 2. Masukkan nomor syscall ke register x8
+        loadOperand(x.number, "x9", Type(TypeKind::I64));
+        os() << "    mov x8, x9\n";
+
+        // 3. Eksekusi Supervisor Call (kernel trap)
+        os() << "    svc #0\n";
+
+        // 4. Ambil nilai kembalian dari x0 dan simpan ke slot SSA result
+        os() << "    mov x9, x0\n";
+        storeSlot(
+            is32(x.resultType) ? "w9" : "x9",
+            slots_.at(x.result.name)
+        );
+    }
+
     void emitTerminator(const Terminator& term) {
         std::visit([&](const auto& x) { emitTerm(x); }, term);
     }
