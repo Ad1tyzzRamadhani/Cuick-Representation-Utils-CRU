@@ -170,6 +170,13 @@ private:
         ast::Literal literal;
         literal.location = location(start);
 
+        if (match(TokenType::STRING_LITERAL)) {
+            literal.kind = ast::LiteralKind::String;
+            literal.text = previous().value;
+            return literal;
+        }
+
+
         if (match(TokenType::INTEGER_LITERAL)) {
             literal.kind =
                 ast::LiteralKind::Integer;
