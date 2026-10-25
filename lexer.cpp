@@ -48,6 +48,7 @@ enum class TokenType {
     KW_CALL,
     KW_CALL_INDIRECT,
     KW_CAST,
+    KW_SYSCALL, 
 
     // Atomic instructions
     KW_ATOMIC_LOAD,
@@ -570,6 +571,7 @@ Lexer::keyword_map_ = {
     {"elem", TokenType::KW_ELEM_ADDR},
     {"call", TokenType::KW_CALL},
     {"cast", TokenType::KW_CAST},
+    {"syscall", TokenType::KW_SYSCALL},
 
     // Atomic instructions
     {"atomic", TokenType::KW_ATOMIC_RMW},
