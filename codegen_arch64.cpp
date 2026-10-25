@@ -1582,11 +1582,32 @@ void emitOne(const FloatCompareInst& x) {
                     unsupported("floating-point global initializer");
                 }
             } else {
-                unsupported("array/aggregate global initializer");
+                 emitInitializer(*g->initializer);
             }
             os() << ".size " << g->name << ", " << l.size << "\n";
         }
     }
+
+void emitInitializer(const Initializer& init) {
+        if (const auto* lit = std::get_if<Literal>(&init)) {
+            if (lit->kind == LiteralKind::Integer) {
+                const auto v = parseIntegerText(lit->text);
+                emitGlobalInteger(v, 1); 
+            } else if (lit->kind == LiteralKind::Boolean) {
+                os() << "    .byte " << (lit->text == "true" ? 1 : 0) << "\n";
+            } else if (lit->kind == LiteralKind::Null) {
+                os() << "    .zero 8\n";
+            } else {
+                unsupported("floating-point global initializer");
+            }
+        } else if (const auto* arrPtr = std::get_if<std::shared_ptr<ArrayLiteral>>(&init)) {
+            if (*arrPtr) {
+                for (const auto& elem : (*arrPtr)->elements) {
+                    emitInitializer(elem);
+                }
+            }
+        }
+}
 
     void emitGlobalInteger(std::uint64_t v, std::uint64_t size) {
         switch (size) {
