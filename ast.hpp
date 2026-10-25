@@ -215,8 +215,6 @@ enum class BinaryOp {
 
 
 struct SyscallInst : Node {
-    std::string result;
-    std::string syscallName;
     Type resultType;
     Operand number;
     std::vector<Operand> args;
@@ -408,7 +406,8 @@ using Instruction = std::variant<
     AtomicLoadInst,
     AtomicStoreInst,
     AtomicRMWInst,
-    AtomicCASInst
+    AtomicCASInst, 
+    SyscallInst
 >;
 
 // ============================================================
