@@ -887,7 +887,7 @@ private:
     // =========================================================
 
         ast::SyscallInst parseSyscall(ast::ResultRef result) {
-        const Token& start = expect(TokenType::IDENTIFIER, "Expected 'syscall'");
+        const Token& start = expect(TokenType::KW_SYSCALL, "Expected 'syscall'");
 
         ast::SyscallInst node;
         node.location = location(start);
@@ -959,10 +959,8 @@ private:
             "Expected '=' after result"
         );
 
-        if(peek().type == TokenType::IDENTIFIER &&
-           peek().value == "syscall") parseSyscall(result);
-
         switch (peek().type) {
+        case TokenType::KW_SYSCALL: return parseSyscall(std::move(result));
         case TokenType::KW_CONST:
             return parseConstant(
                 std::move(result)
