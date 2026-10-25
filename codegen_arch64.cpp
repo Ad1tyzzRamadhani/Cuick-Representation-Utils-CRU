@@ -834,8 +834,6 @@ void emitOne(const FloatCompareInst& x) {
     storeSlot("w9", slots_.at(x.result.name));
 }
 
-    void emitOne(const SyscallInst& x) { unsupported("Syscall");}
-
     void emitOne(const FloatBinaryInst& x) {
     if (!isScalarFloat(x.type)) {
         unsupported(
@@ -1479,6 +1477,8 @@ void emitOne(const FloatCompareInst& x) {
         }
     }, x);
     }
+
+    void emitOne(const SyscallInst& x) { unsupported("Syscall");}
     void emitTerminator(const Terminator& term) {
         std::visit([&](const auto& x) { emitTerm(x); }, term);
     }
