@@ -20,6 +20,14 @@ std::string readFile(const fs::path& path) {
     return buffer.str();
 }
 
+void printUsage(const char* progName) {
+    std::cerr << "Usage:\n"
+              << "  " << progName << " <file.cro> -o <output_bin>           # Compile & link via gcc\n"
+              << "  " << progName << " <file.cro> -s <output.s>           # Save assembly file only\n"
+              << "  " << progName << " <file.cro> -o -nomain <output_bin>  # Compile & link raw via ld\n";
+}
+
+
 int main(int argc, char* argv[]) {
   if (argc < 4) {
         printUsage(argv[0]);
