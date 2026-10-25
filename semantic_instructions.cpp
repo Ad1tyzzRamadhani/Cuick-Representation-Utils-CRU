@@ -221,6 +221,9 @@ std::visit(
         // Unary operations
         // ------------------------------------------------
 
+        [this, &getOperandType]( const ast::SyscallInst& node) {
+             report("Syscall Semantic not implemented yet");
+        }
         [this, &getOperandType](
             const ast::UnaryInst& node
         ) {
