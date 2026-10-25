@@ -330,11 +330,7 @@ private:
                           std::is_same_v<T, AtomicCASInst> ||
                           std::is_same_v<T, SyscallInst> ) {
                 if constexpr (std::is_same_v<T, ConstantInst>) allocateSlot(x.result, x.type);
-                else if constexpr (std::is_same_v<T, SyscallInst>) {
-                    if (x.result.has_value()) {
-                    allocateSlot(*x.result, x.resultType);
-                    }
-                }
+                else if constexpr (std::is_same_v<T, SyscallInst>) allocateSlot(x.result, x.resultType);
                 else if constexpr (std::is_same_v<T, UnaryInst>) allocateSlot(x.result, x.type);
                 else if constexpr (std::is_same_v<T, BinaryInst>) allocateSlot(x.result, x.type);
                 else if constexpr (std::is_same_v<T, CompareInst> || std::is_same_v<T, FloatCompareInst>) allocateSlot(x.result, Type(TypeKind::Bool));
