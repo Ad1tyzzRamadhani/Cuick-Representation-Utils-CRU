@@ -99,7 +99,8 @@ enum class LiteralKind {
     Integer,
     Float,
     Boolean,
-    Null
+    Null, 
+    String
 };
 
 // Keep numeric spelling intact until semantic checking.
