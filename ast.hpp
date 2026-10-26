@@ -100,6 +100,7 @@ enum class LiteralKind {
     Float,
     Boolean,
     Null, 
+    Character, 
     String
 };
 
