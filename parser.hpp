@@ -176,6 +176,34 @@ private:
             return literal;
         }
 
+        if (match(TokenType::CHAR_LITERAL)) {
+            literal.kind = ast::LiteralKind::Character;
+            
+            // Konversi isi text ('C' atau '\n') menjadi nilai integer ASCII-nya
+            std::string raw = previous().value; // Termasuk petik tunggal, misal "'C'" atau "'\n'"
+            std::string inner = raw.substr(1, raw.size() - 2); // Ambil isi di dalam petik
+            
+            uint8_t charVal = 0;
+            if (inner.size() == 1) {
+                charVal = static_cast<uint8_t>(inner[0]);
+            } else if (inner.size() == 2 && inner[0] == '\\') {
+                switch (inner[1]) {
+                case 'n': charVal = '\n'; break;
+                case 't': charVal = '\t'; break;
+                case 'r': charVal = '\r'; break;
+                case '0': charVal = '\0'; break;
+                case '\\': charVal = '\\'; break;
+                case '\'': charVal = '\''; break;
+                default: charVal = static_cast<uint8_t>(inner[1]); break;
+                }
+            }
+            
+            // Simpan sebagai string angka ASCII (misal 'A' -> "65")
+            literal.text = std::to_string(charVal);
+            return literal;
+        }
+
+
 
         if (match(TokenType::INTEGER_LITERAL)) {
             literal.kind =
