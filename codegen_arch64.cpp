@@ -623,7 +623,7 @@ void storeFloatResult(
             return;
         }
         const auto& lit = std::get<Literal>(op);
-        if (lit.kind == LiteralKind::Integer) {
+        if (lit.kind == LiteralKind::Integer || lit.kind == LiteralKind::Character) {
             emitMoveImmediate(reg, parseIntegerText(lit.text));
         } else if (lit.kind == LiteralKind::Boolean) {
             emitMoveImmediate(reg, (lit.text == "true") ? 1 : 0);
@@ -1579,7 +1579,7 @@ void emitOne(const FloatCompareInst& x) {
             if (!g->initializer) {
                 os() << "    .zero " << l.size << "\n";
             } else if (const auto* lit = std::get_if<Literal>(&*g->initializer)) {
-                if (lit->kind == LiteralKind::Integer) {
+                if (lit->kind == LiteralKind::Integer || lit.kind == LiteralKind::Character) {
                     const auto v = parseIntegerText(lit->text);
                     emitGlobalInteger(v, l.size);
                 } else if (lit->kind == LiteralKind::Float) {
@@ -1610,17 +1610,23 @@ void emitOne(const FloatCompareInst& x) {
         }
     }
 
-void emitInitializer(const Initializer& init) {
+void emitInitializer(const Initializer& init, TypeLayout currentLayout) {
         if (const auto* lit = std::get_if<Literal>(&init)) {
-            if (lit->kind == LiteralKind::Integer) {
+            if (lit->kind == LiteralKind::Integer || lit.kind == LiteralKind::Character) {
                 const auto v = parseIntegerText(lit->text);
-                emitGlobalInteger(v, 1);
+                emitGlobalInteger(v, currentLayout);
             } else if (lit->kind == LiteralKind::Float) {
-            
+                if (currentLayout.size == 4) {
                 float val = std::stof(lit->text);
                 std::uint32_t bits;
                 std::memcpy(&bits, &val, sizeof(bits));
                 os() << "    .word " << bits << "\n";
+                } else {
+                    double val = std::stod(lit->text);
+                    std::uint64_t bits;
+                    std::memcpy(&bits, &val, sizeof(bits));
+                    os() << "    .xword " << bits << "\n";
+                }
             } else if (lit->kind == LiteralKind::Boolean) {
                 os() << "    .byte " << (lit->text == "true" ? 1 : 0) << "\n";
             } else if (lit->kind == LiteralKind::Null) {
