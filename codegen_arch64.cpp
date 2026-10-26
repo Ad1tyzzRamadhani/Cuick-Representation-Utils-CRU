@@ -1579,7 +1579,7 @@ void emitOne(const FloatCompareInst& x) {
             if (!g->initializer) {
                 os() << "    .zero " << l.size << "\n";
             } else if (const auto* lit = std::get_if<Literal>(&*g->initializer)) {
-                if (lit->kind == LiteralKind::Integer || lit.kind == LiteralKind::Character) {
+                if (lit->kind == LiteralKind::Integer || lit->kind == LiteralKind::Character) {
                     const auto v = parseIntegerText(lit->text);
                     emitGlobalInteger(v, l.size);
                 } else if (lit->kind == LiteralKind::Float) {
@@ -1604,7 +1604,7 @@ void emitOne(const FloatCompareInst& x) {
                     unsupported("floating-point global initializer");
                 }
             } else {
-                 emitInitializer(*g->initializer);
+                 emitInitializer(*g->initializer,l);
             }
             os() << ".size " << g->name << ", " << l.size << "\n";
         }
@@ -1612,9 +1612,9 @@ void emitOne(const FloatCompareInst& x) {
 
 void emitInitializer(const Initializer& init, TypeLayout currentLayout) {
         if (const auto* lit = std::get_if<Literal>(&init)) {
-            if (lit->kind == LiteralKind::Integer || lit.kind == LiteralKind::Character) {
+            if (lit->kind == LiteralKind::Integer || lit->kind == LiteralKind::Character) {
                 const auto v = parseIntegerText(lit->text);
-                emitGlobalInteger(v, currentLayout);
+                emitGlobalInteger(v, currentLayout.size);
             } else if (lit->kind == LiteralKind::Float) {
                 if (currentLayout.size == 4) {
                 float val = std::stof(lit->text);
