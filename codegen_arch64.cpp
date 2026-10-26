@@ -713,6 +713,13 @@ void saveCallResult(
 }
 
     void emitOne(const ConstantInst& x) {
+        if (isScalarFloat(x.type)) {
+            const std::string freg = floatReg("0", x.type);
+            loadFloatOperand(Operand{x.value}, freg, x.type);
+            storeFloatResult(freg, x.type, slots_.at(x.result.name));
+            return;
+        }
+
         if (!isIntegerLike(x.type)) unsupported("const for type " + typeName(x.type));
         loadOperand(Operand{x.value}, "x9", x.type);
         storeSlot(is32(x.type) ? "w9" : "x9", slots_.at(x.result.name));
