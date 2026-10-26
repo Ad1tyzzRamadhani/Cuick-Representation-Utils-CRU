@@ -15,6 +15,7 @@ enum class TokenType {
     RESULT,
     INTEGER_LITERAL,
     FLOAT_LITERAL, 
+    CHAR_LITERAL, 
     STRING_LITERAL, 
 
     // Literals
@@ -166,6 +167,8 @@ public:
 
             if (c == '@') {
                 escapedIdentifier();
+            } else if (c == '\'') {
+                charLiteral();
             } else if (isIdentifierStart(c)) {
                 identifier();
             } else if (std::isdigit(static_cast<unsigned char>(c))) {
@@ -325,6 +328,38 @@ private:
             break;
         }
     }
+
+    void charLiteral() {
+    const std::size_t start = pos_;
+    const std::size_t startLine = line_;
+    const std::size_t startColumn = column_;
+
+    advance(); // Lewati petik pembuka '\''
+
+    if (isAtEnd()) {
+        errorAt(startLine, startColumn, "Unterminated character literal");
+    }
+
+    char ch = peek();
+    if (ch == '\\') {
+        advance(); // Lewati '\'
+        if (isAtEnd()) {
+            errorAt(startLine, startColumn, "Unterminated escape sequence in character literal");
+        }
+        advance(); // Lewati karakter escape
+    } else {
+        advance(); // Lewati karakter biasa
+    }
+
+    if (peek() != '\'') {
+        errorAt(startLine, startColumn, "Character literal must contain exactly one character");
+    }
+
+    advance(); // Lewati petik penutup '\''
+
+    emit(TokenType::CHAR_LITERAL, start, startLine, startColumn);
+}
+
 
     void escapedIdentifier() {
     const std::size_t start = pos_;
