@@ -1633,13 +1633,19 @@ void emitInitializer(const Initializer& init, TypeLayout currentLayout) {
                 os() << "    .byte " << (lit->text == "true" ? 1 : 0) << "\n";
             } else if (lit->kind == LiteralKind::Null) {
                 os() << "    .zero 8\n";
+            } else if (lit->kind == LiteralKind::String) {
+                os() << "    .asciz " << lit->text << "\n";
             } else {
-                unsupported("floating-point global initializer");
+                unsupported("unsupported global initializer literal");
             }
         } else if (const auto* arrPtr = std::get_if<std::shared_ptr<ArrayLiteral>>(&init)) {
             if (*arrPtr) {
+                std::uint64_t elemSize = currentLayout.size / (*arrPtr)->elements.size();
+                if (elemSize == 0) elemSize = 1;
+                TypeLayout elemLayout{elemSize, currentLayout.alignment};
+
                 for (const auto& elem : (*arrPtr)->elements) {
-                    emitInitializer(elem, currentLayout);
+                    emitInitializer(elem, elemLayout);
                 }
             }
         }
