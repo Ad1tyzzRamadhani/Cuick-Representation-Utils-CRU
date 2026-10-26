@@ -1582,6 +1582,18 @@ void emitOne(const FloatCompareInst& x) {
                 if (lit->kind == LiteralKind::Integer) {
                     const auto v = parseIntegerText(lit->text);
                     emitGlobalInteger(v, l.size);
+                } else if (lit->kind == LiteralKind::Float) {
+                    if (l.size == 4) {
+                    float val = std::stof(lit->text);
+                    std::uint32_t bits;
+                    std::memcpy(&bits, &val, sizeof(bits));
+                    os() << "    .word " << bits << "\n";
+                    } else {
+                    double val = std::stod(lit->text);
+                    std::uint64_t bits;
+                    std::memcpy(&bits, &val, sizeof(bits));
+                    os() << "    .xword " << bits << "\n";
+                    }
                 } else if (lit->kind == LiteralKind::Boolean) {
                     os() << "    .byte " << (lit->text == "true" ? 1 : 0) << "\n";
                 } else if (lit->kind == LiteralKind::Null) {
@@ -1604,7 +1616,7 @@ void emitInitializer(const Initializer& init) {
                 const auto v = parseIntegerText(lit->text);
                 emitGlobalInteger(v, 1);
             } else if (lit->kind == LiteralKind::Float) {
-                if (l.size == 4) {
+                if (currentLayout.size == 4) {
                 float val = std::stof(lit->text);
                 std::uint32_t bits;
                 std::memcpy(&bits, &val, sizeof(bits));
