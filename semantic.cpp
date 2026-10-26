@@ -498,7 +498,9 @@ std::optional<ast::Type> SemanticAnalyzer::operandType(
         inferred = expected && isFloat(*expected)
             ? *expected : ast::Type(ast::TypeKind::F64);
         break;
-
+    case ast::LiteralKind::Character:
+        inferred = ast::Type(ast::TypeKind::I8);
+        break;
     case ast::LiteralKind::Integer:
         inferred = expected && isInteger(*expected)
             ? *expected : ast::Type(ast::TypeKind::I32);
