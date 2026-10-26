@@ -475,6 +475,8 @@ Type inferOperandType(const Operand& op) {
     const auto& lit = std::get<Literal>(op);
 
     switch (lit.kind) {
+    case LiteralKind::Character:
+        return Type(TypeKind::I8);
     case LiteralKind::Integer:
         return Type(TypeKind::I64);
     case LiteralKind::Float:
@@ -1637,7 +1639,7 @@ void emitInitializer(const Initializer& init, TypeLayout currentLayout) {
         } else if (const auto* arrPtr = std::get_if<std::shared_ptr<ArrayLiteral>>(&init)) {
             if (*arrPtr) {
                 for (const auto& elem : (*arrPtr)->elements) {
-                    emitInitializer(elem);
+                    emitInitializer(elem, currentLayout);
                 }
             }
         }
