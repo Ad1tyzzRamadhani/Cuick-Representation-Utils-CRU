@@ -514,11 +514,24 @@ std::visit(
         ) {
             validateType(node.type, node.location);
 
-            getOperandType(
+            auto valueType = getOperandType(
                 node.value,
-                node.location,
-                &node.type
+                node.location
             );
+
+            if (valueType) {
+                // Periksa apakah ada aturan implicit cast yang diizinkan:
+                // Contoh: Mengizinkan nilai integer (misal i32) di-store secara implisit ke store.ptr
+                bool allowImplicitCast = 
+                    (isInteger(*valueType) && isPointer(node.type)) || 
+                    sameType(*valueType, node.type);
+
+                if (!allowImplicitCast) {
+                    // Jika bukan implicit cast yang valid, jalankan pengecekan tipe normal
+                    getOperandType(node.value, node.location, &node.type);
+                }
+            }
+
 
             checkAddress(node.address, node.location);
 
