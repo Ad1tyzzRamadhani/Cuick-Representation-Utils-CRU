@@ -523,7 +523,7 @@ std::visit(
                 // Periksa apakah ada aturan implicit cast yang diizinkan:
                 // Contoh: Mengizinkan nilai integer (misal i32) di-store secara implisit ke store.ptr
                 bool allowImplicitCast = 
-                    (isInteger(*valueType) && isPointer(node.type)) || 
+                    isPointer(node.type) || 
                     sameType(*valueType, node.type);
 
                 if (!allowImplicitCast) {
