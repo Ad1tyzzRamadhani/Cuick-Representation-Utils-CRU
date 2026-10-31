@@ -554,7 +554,6 @@ void loadFloatOperand(
         if (it == slots_.end()) {
             unsupported("unknown SSA value %" + r->name);
         }
-yuuk
         loadSlot(wreg, it->second);
         os() << "    fmov " << freg << ", " << wreg << "\n";
         return;
