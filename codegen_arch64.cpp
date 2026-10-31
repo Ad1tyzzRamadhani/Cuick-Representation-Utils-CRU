@@ -70,6 +70,10 @@ bool isIntegerLike(const Type& t) {
     }
 }
 
+bool isStructType(const Type& t, const LayoutEngine& layouts) {
+    return t.kind == TypeKind::Named && layouts.structs.count(t.name) > 0;
+}
+
 unsigned bitWidth(const Type& t) {
     switch (t.kind) {
     case TypeKind::I8: case TypeKind::U8: return 8;
@@ -1053,8 +1057,9 @@ void emitOne(const FloatCompareInst& x) {
         );
 }
     void emitOne(const StoreInst& x) {
-    if (!isIntegerLike(x.type)) {
-        unsupported("store for type " + typeName(x.type));
+    TypeLayout layout = layouts_.layout(x.type);
+    if (layout.size == 0) {
+        unsupported("store for empty or unsupported type " + typeName(x.type));
     }
 
     // x9 = nilai yang akan disimpan.
