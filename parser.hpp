@@ -797,10 +797,13 @@ private:
         param.type =
             parseType(false);
 
-        param.name =
-            expectIdentifier(
-                "Expected parameter name"
-            );
+        if (check(TokenType::IDENTIFIER)) {
+            // Pastikan identifier ini bukan bagian dari token lain atau keliru, 
+            // tapi dalam konteks parameter, ini aman.
+            param.name = advance().value;
+        } else {
+            param.name = ""; // Parameter tanpa nama (biasa digunakan di extern)
+        }
 
         return param;
     }
