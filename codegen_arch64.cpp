@@ -357,6 +357,26 @@ private:
         }, ins);
     }
 
+    // Di dalam class Generator private:
+struct AnonymousString {
+    std::string text;
+    std::string label;
+};
+std::vector<AnonymousString> anonymousStrings_;
+std::unordered_map<std::string, std::string> stringToLabel_;
+
+std::string getOrCreateStringLabel(const std::string& text) {
+    auto it = stringToLabel_.find(text);
+    if (it != stringToLabel_.end()) {
+        return it->second;
+    }
+    std::string label = ".L.str." + std::to_string(anonymousStrings_.size());
+    anonymousStrings_.push_back({text, label});
+    stringToLabel_[text] = label;
+    return label;
+}
+
+
     void emitFunction(const Function& f) {
         currentFunction_ = &f;
         slots_.clear(); valueTypes_.clear(); blockLabels_.clear();
@@ -635,6 +655,11 @@ void storeFloatResult(
             emitMoveImmediate(reg, (lit.text == "true") ? 1 : 0);
         } else if (lit.kind == LiteralKind::Null) {
             emitMoveImmediate(reg, 0);
+        } else if (lit.kind == LiteralKind::String) {
+        // Otomatis buat label rodata untuk string literal lokal/anonim
+            std::string label = getOrCreateStringLabel(lit.text);
+            os() << "    adrp " << reg << ", " << label << "\n";
+            os() << "    add " << reg << ", " << reg << ", :lo12:" << label << "\n";
         } else {
             unsupported("floating-point literal in integer instruction");
         }
@@ -884,12 +909,12 @@ void emitOne(const FloatCompareInst& x) {
     storeFloatResult(a, x.type, slots_.at(x.result.name));
     }
     void emitOne(const CastInst& x) {
-    const Type src = inferOperandType(x.operand);
-    const Type& dst = x.targetType;
+        const Type src = inferOperandType(x.operand);
+        const Type& dst = x.targetType;
 
-    const auto resultOffset = slots_.at(x.result.name);
+         const auto resultOffset = slots_.at(x.result.name);
 
-    if (src.kind == dst.kind) {
+        if (src.kind == dst.kind) {
         if (isScalarFloat(dst)) {
             loadFloatOperand(x.operand, floatReg("0", src), src);
             storeFloatResult(floatReg("0", dst), dst, resultOffset);
@@ -1616,6 +1641,17 @@ void emitOne(const FloatCompareInst& x) {
             os() << ".size " << g->name << ", " << l.size << "\n";
         }
     }
+
+void emitAnonymousStrings() {
+    if (anonymousStrings_.empty()) return;
+
+    os() << "\n.section .rodata\n";
+    for (const auto& str : anonymousStrings_) {
+        os() << str.label << ":\n";
+        os() << "    .asciz " << str.text << "\n";
+    }
+}
+
 
 void emitInitializer(const Initializer& init, TypeLayout currentLayout) {
         if (const auto* lit = std::get_if<Literal>(&init)) {
