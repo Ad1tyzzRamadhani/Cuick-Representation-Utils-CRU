@@ -756,11 +756,6 @@ private:
         header.returnType =
             parseReturnType();
 
-        header.name =
-            expectIdentifier(
-                "Expected function name"
-            );
-
         expect(
             TokenType::LPAREN,
             "Expected '(' after function name"
