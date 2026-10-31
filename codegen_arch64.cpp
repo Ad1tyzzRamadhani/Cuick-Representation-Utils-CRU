@@ -70,21 +70,6 @@ bool isIntegerLike(const Type& t) {
     }
 }
 
-unsigned bitWidth(const Type& t) {
-    switch (t.kind) {
-    case TypeKind::I8: case TypeKind::U8: return 8;
-    case TypeKind::I16: case TypeKind::U16: return 16;
-    case TypeKind::I32: case TypeKind::U32: case TypeKind::F32: return 32;
-    case TypeKind::I64: case TypeKind::U64: case TypeKind::ISize:
-    case TypeKind::USize: case TypeKind::F64: case TypeKind::Ptr: return 64;
-    case TypeKind::Bool: return 32;
-    case TypeKind::Named:
-        auto l = layouts_.layout(t);
-        return static_cast<unsigned>(l.size * 8);
-    default: unsupported("bit width for type " + typeName(t));
-    }
-}
-
 std::uint64_t alignUp(std::uint64_t n, std::uint64_t a) {
     if (a == 0) return n;
     return (n + a - 1) / a * a;
@@ -213,6 +198,22 @@ std::uint64_t fieldOffset(
     unsupported("failed to calculate field offset");
 }
 };
+
+unsigned bitWidth(const Type& t) {
+    LayoutEngine layout;
+    switch (t.kind) {
+    case TypeKind::I8: case TypeKind::U8: return 8;
+    case TypeKind::I16: case TypeKind::U16: return 16;
+    case TypeKind::I32: case TypeKind::U32: case TypeKind::F32: return 32;
+    case TypeKind::I64: case TypeKind::U64: case TypeKind::ISize:
+    case TypeKind::USize: case TypeKind::F64: case TypeKind::Ptr: return 64;
+    case TypeKind::Bool: return 32;
+    case TypeKind::Named:
+        auto l = layout.layout(t);
+        return static_cast<unsigned>(l.size * 8);
+    default: unsupported("bit width for type " + typeName(t));
+    }
+}
 
 bool isStructType(const Type& t, const LayoutEngine& layouts) {
     return t.kind == TypeKind::Named && layouts.structs.count(t.name) > 0;
