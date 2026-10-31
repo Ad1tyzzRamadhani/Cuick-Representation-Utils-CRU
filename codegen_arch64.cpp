@@ -281,6 +281,7 @@ public:
             if (const auto* f = std::get_if<Function>(&d)) emitFunction(*f);
         }
         emitGlobals();
+        emitAnonymousStrings();
         out_ << ".section .note.GNU-stack,\"\",%progbits\n";
         return out_.str();
     }
