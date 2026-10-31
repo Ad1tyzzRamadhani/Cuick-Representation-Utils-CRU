@@ -70,10 +70,6 @@ bool isIntegerLike(const Type& t) {
     }
 }
 
-bool isStructType(const Type& t, const LayoutEngine& layouts) {
-    return t.kind == TypeKind::Named && layouts.structs.count(t.name) > 0;
-}
-
 unsigned bitWidth(const Type& t) {
     switch (t.kind) {
     case TypeKind::I8: case TypeKind::U8: return 8;
@@ -214,6 +210,10 @@ std::uint64_t fieldOffset(
     unsupported("failed to calculate field offset");
 }
 };
+
+bool isStructType(const Type& t, const LayoutEngine& layouts) {
+    return t.kind == TypeKind::Named && layouts.structs.count(t.name) > 0;
+}
 
 std::uint64_t parseIntegerText(const std::string& text) {
     if (text.empty()) throw std::runtime_error("AArch64 codegen: empty integer literal");
