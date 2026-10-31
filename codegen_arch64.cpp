@@ -78,6 +78,9 @@ unsigned bitWidth(const Type& t) {
     case TypeKind::I64: case TypeKind::U64: case TypeKind::ISize:
     case TypeKind::USize: case TypeKind::F64: case TypeKind::Ptr: return 64;
     case TypeKind::Bool: return 32;
+    case TypeKind::Named:
+        auto l = layouts_.layout(t);
+        return static_cast<unsigned>(l.size * 8);
     default: unsupported("bit width for type " + typeName(t));
     }
 }
