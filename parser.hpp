@@ -1311,8 +1311,12 @@ private:
         node.op =
             parseCompareOp(opToken);
 
-        node.type =
-            parseDottedIntegerType();
+        expect(TokenType::DOT, "Expected '.' before comparison type");
+        if (match(TokenType::TYPE_PTR)) {
+            node.type = ast::Type(ast::TypeKind::Ptr);
+        } else {
+            node.type = parseIntegerType();
+        }
 
         node.lhs =
             parseOperand();
