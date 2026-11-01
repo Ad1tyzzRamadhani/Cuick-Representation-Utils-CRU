@@ -348,10 +348,10 @@ std::visit(
                 &node.type
             );
 
-            if (!isInteger(node.type)) {
+            if (!isInteger(node.type) && !isPointer(node.type)) {
                 report(
                     node.location,
-                    "Integer comparison requires an integer type"
+                    "Integer comparison requires an integer type or pointer"
                 );
             }
 
