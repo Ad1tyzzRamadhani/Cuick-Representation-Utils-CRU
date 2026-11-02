@@ -128,15 +128,15 @@ int main(int argc, char* argv[]) {
 
     if (linkWithLibs) {
         // Gabungkan library menjadi format flag ld (misal: -la -lb -lc)
-        std::string libFlags = "";
+        std::string extraFiles = "";
         for (const auto& lib : libraries) {
-            libFlags += " -l" + lib;
+            extraFiles += " " + lib;
         }
 
         // Jalankan assembler (as) lalu linker (ld) dengan menyertakan library eksternal
         compileCommand = "as " + tempAssemblyFile + " -o " + tempObjFile + 
-                         " && ld " + tempObjFile + " -o " + outputFilename + 
-                         libFlags + " && rm " + tempObjFile;
+                         " && ld " + tempObjFile + extraFiles + " -o " + outputFilename + 
+                         " && rm " + tempObjFile;
     } 
     else if (rawLdMode) {
         compileCommand = "as " + tempAssemblyFile + " -o " + tempObjFile + 
