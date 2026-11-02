@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
                          " && rm " + tempObjFile;
     } else {
         // Menggunakan gcc untuk otomatis menangani crt0, libc, dll.
-        compileCommand = "gcc " + tempAssemblyFile + " -o " + outputFilename;
+        compileCommand = "as " + tempAssemblyFile + " -o " + outputFilename;
     }
 
     // Eksekusi perintah sistem (as/ld/gcc)
