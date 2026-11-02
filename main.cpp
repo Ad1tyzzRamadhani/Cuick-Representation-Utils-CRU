@@ -1,4 +1,8 @@
 #include <fstream>
+#include <vector>
+#include <filesystem>
+#include <sstream>
+#include <iostream>
 #include "lexer.cpp"
 #include "ast.hpp"
 #include "parser.hpp"
@@ -22,12 +26,10 @@ std::string readFile(const fs::path& path) {
 
 void printUsage(const char* progName) {
     std::cerr << "Usage:\n"
-              << "  " << progName << " <file.cro> -o <output_bin>           # Compile & link via gcc\n"
-              << "  " << progName << " <file.cro> -s <output.s>           # Save assembly file only\n"
-              << "  " << progName << " <file.cro> -o -nomain <output_bin>  # Compile & link raw via ld\n"
-              << "  " << progName << " <file.cro> -o -l <output_bin> a b c # Compile & link raw with libraries via ld\n";
+              << "  " << progName << " <file1.cro> [file2.cro ...] -o <output_bin>        # Compile & link multiple .cro files\n"
+              << "  " << progName << " <file.cro> -s <output.s>                       # Save assembly file only (single file)\n"
+              << "  " << progName << " <file1.cro> [file2.cro ...] -o -nomain <output_bin> # Raw ld mode without entry adjustments\n";
 }
-
 
 int main(int argc, char* argv[]) {
     if (argc < 4) {
@@ -35,130 +37,151 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::string inputFile = argv[1];
-    std::string flag = argv[2];
-    
-    bool rawLdMode = false;
-    bool linkWithLibs = false;
-    std::string outputFilename;
-    std::vector<std::string> libraries;
-
-    if (flag == "-s") {
-        outputFilename = argv[3];
-    } else if (flag == "-o") {
-        std::string subFlag = argv[3];
-        if (subFlag == "-nomain") {
-            if (argc < 5) {
-                std::cerr << "Error: Missing output filename after -nomain\n";
-                return 1;
-            }
-            rawLdMode = true;
-            outputFilename = argv[4];
-        } 
-        else if (subFlag == "-l") {
-            // Format: ./cro main.cro -o -l <output_bin> lib1 lib2 ...
-            if (argc < 6) {
-                std::cerr << "Error: Missing output filename or libraries after -l\n";
-                return 1;
-            }
-            rawLdMode = true;
-            linkWithLibs = true;
-            outputFilename = argv[4];
-            
-            // Ambil argumen sisa sebagai nama library (-la, -lb, dst.)
-            for (int i = 5; i < argc; ++i) {
-                libraries.push_back(argv[i]);
-            }
-        } 
-        else {
-            outputFilename = argv[3];
+    // Cari posisi argumen flag (-o atau -s)
+    int flagIndex = -1;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "-o" || arg == "-s") {
+            flagIndex = i;
+            break;
         }
-    } else {
-        std::cerr << "Error: Unknown flag '" << flag << "'\n";
+    }
+
+    if (flagIndex == -1 || flagIndex == 1) {
+        std::cerr << "Error: Invalid argument structure or missing output flag (-o / -s).\n";
         printUsage(argv[0]);
         return 1;
     }
 
-    // 1. Baca file source .cro
-    std::string source;
-    try {
-        source = readFile(inputFile);
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << '\n';
-        return 1;
+    // Semua argumen sebelum flag dianggap sebagai file input (.cro)
+    std::vector<std::string> inputFiles;
+    for (int i = 1; i < flagIndex; ++i) {
+        inputFiles.push_back(argv[i]);
     }
 
-    Lexer lexer(source, "main.cro");
-    cru::Parser parser(lexer.tokenize());
-    cru::sem::SemanticAnalyzer semantic;
-    auto module = parser.parseModule();
-    
-    if (!semantic.analyze(module)) {
-        for (const auto& msg : semantic.diagnostics()) {
-            std::cerr << msg.location.file << ":"
-                      << msg.location.line << ":"
-                      << msg.location.column << ": "
-                      << msg.message << '\n';
-        }
-        return 0;
-    }
-
-    std::string assembly = cru::codegen::codegenArch(std::move(module));
+    std::string flag = argv[flagIndex];
+    bool rawLdMode = false;
+    std::string outputFilename;
 
     if (flag == "-s") {
-        std::ofstream outFile(outputFilename);
-        if (!outFile) {
-            std::cerr << "Error: Cannot write to assembly file " << outputFilename << '\n';
+        if (inputFiles.size() > 1) {
+            std::cerr << "Error: Flag -s only supports a single input file.\n";
             return 1;
         }
-        outFile << assembly;
-        std::cout << "Successfully generated assembly: " << outputFilename << '\n';
-        return 0;
+        if (flagIndex + 1 >= argc) {
+            std::cerr << "Error: Missing output assembly filename after -s\n";
+            return 1;
+        }
+        outputFilename = argv[flagIndex + 1];
+    } 
+    else if (flag == "-o") {
+        // Cek apakah ada sub-flag -nomain setelah -o
+        if (flagIndex + 1 < argc && std::string(argv[flagIndex + 1]) == "-nomain") {
+            rawLdMode = true;
+            if (flagIndex + 2 >= argc) {
+                std::cerr << "Error: Missing output filename after -nomain\n";
+                return 1;
+            }
+            outputFilename = argv[flagIndex + 2];
+        } else {
+            if (flagIndex + 1 >= argc) {
+                std::cerr << "Error: Missing output binary filename after -o\n";
+                return 1;
+            }
+            outputFilename = argv[flagIndex + 1];
+        }
     }
 
-    // Simpan sementara ke file assembly (.s)
-    std::string tempAssemblyFile = "temp_output_cru.s";
-    {
-        std::ofstream tempFile(tempAssemblyFile);
-        tempFile << assembly;
-    }
+    std::vector<std::string> generatedObjFiles;
 
-    std::string compileCommand;
-    std::string tempObjFile = "temp_output_cru.o";
-
-    if (linkWithLibs) {
-        // Gabungkan library menjadi format flag ld (misal: -la -lb -lc)
-        std::string extraFiles = "";
-        for (const auto& lib : libraries) {
-            extraFiles += " " + lib;
+    // 2. Loop kompilasi setiap file input .cro
+    for (std::size_t i = 0; i < inputFiles.size(); ++i) {
+        const auto& inputFile = inputFiles[i];
+        std::string source;
+        try {
+            source = readFile(inputFile);
+        } catch (const std::exception& e) {
+            std::cerr << e.what() << '\n';
+            return 1;
         }
 
-        // Jalankan assembler (as) lalu linker (ld) dengan menyertakan library eksternal
-        compileCommand = "as " + tempAssemblyFile + " -o " + tempObjFile + 
-                         " && ld " + tempObjFile + extraFiles + " -o " + outputFilename + 
-                         " && rm " + tempObjFile;
-    } 
-    else if (rawLdMode) {
-        compileCommand = "as " + tempAssemblyFile + " -o " + tempObjFile + 
-                         " && ld " + tempObjFile + " -o " + outputFilename + 
-                         " && rm " + tempObjFile;
-    } 
-    else {
-        // Catatan: Pada kode asli Anda bagian else menggunakan 'as' (mungkin maksudnya 'gcc' untuk mode standar)
-        compileCommand = "as " + tempAssemblyFile + " -o " + outputFilename;
+        Lexer lexer(source, inputFile);
+        cru::Parser parser(lexer.tokenize());
+        cru::sem::SemanticAnalyzer semantic;
+        auto module = parser.parseModule();
+        
+        if (!semantic.analyze(module)) {
+            std::cerr << "Semantic analysis failed in " << inputFile << ":\n";
+            for (const auto& msg : semantic.diagnostics()) {
+                std::cerr << msg.location.file << ":"
+                          << msg.location.line << ":"
+                          << msg.location.column << ": "
+                          << msg.message << '\n';
+            }
+            return 1;
+        }
+
+        std::string assembly = cru::codegen::codegenArch(std::move(module));
+
+        // Jika mode -s (save assembly), cukup simpan ke file output dan selesai
+        if (flag == "-s") {
+            std::ofstream outFile(outputFilename);
+            if (!outFile) {
+                std::cerr << "Error: Cannot write to assembly file " << outputFilename << '\n';
+                return 1;
+            }
+            outFile << assembly;
+            std::cout << "Successfully generated assembly: " << outputFilename << '\n';
+            return 0;
+        }
+
+        // Simpan sementara ke file assembly (.s) untuk masing-masing file
+        std::string tempAsmFile = "temp_output_" + std::to_string(i) + ".s";
+        std::string tempObjFile = "temp_output_" + std::to_string(i) + ".o";
+
+        {
+            std::ofstream tempFile(tempAsmFile);
+            tempFile << assembly;
+        }
+
+        // Assembler: as file.s -o file.o
+        std::string assembleCmd = "as " + tempAsmFile + " -o " + tempObjFile;
+        int assembleResult = std::system(assembleCmd.c_str());
+        
+        // Hapus file assembly sementara
+        std::remove(tempAsmFile.c_str());
+
+        if (assembleResult != 0) {
+            std::cerr << "Error: Assembly failed for " << inputFile << '\n';
+            // Bersihkan file .o yang sudah terlanjur dibuat
+            for (const auto& obj : generatedObjFiles) {
+                std::remove(obj.c_str());
+            }
+            return 1;
+        }
+
+        generatedObjFiles.push_back(tempObjFile);
     }
 
-    // Eksekusi perintah sistem
-    int result = std::system(compileCommand.c_str());
-    
-    // Hapus file assembly sementara
-    std::remove(tempAssemblyFile.c_str());
+    // 3. Tahap Linking menggunakan ld untuk menggabungkan semua file .o
+    std::string linkCmd = "ld";
+    for (const auto& obj : generatedObjFiles) {
+        linkCmd += " " + obj;
+    }
+    linkCmd += " -o " + outputFilename;
 
-    if (result != 0) {
-        std::cerr << "Error: Compilation/Linking failed.\n";
+    int linkResult = std::system(linkCmd.c_str());
+
+    // Hapus file-file objek sementara setelah di-link
+    for (const auto& obj : generatedObjFiles) {
+        std::remove(obj.c_str());
+    }
+
+    if (linkResult != 0) {
+        std::cerr << "Error: Linking failed via ld.\n";
         return 1;
     }
 
-    std::cout << "Successfully compiled to executable: " << outputFilename << '\n';
+    std::cout << "Successfully compiled and linked multiple files into: " << outputFilename << '\n';
     return 0;
 }
