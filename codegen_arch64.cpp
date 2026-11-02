@@ -388,11 +388,31 @@ std::string getOrCreateStringLabel(const std::string& text) {
         slots_.clear(); valueTypes_.clear(); blockLabels_.clear();
         nextSlot_ = 0;
         for (const auto& b : f.blocks) blockLabels_[b.name] = localLabel(b.name);
-
+        unsigned intReg = 0;
+        unsigned fpReg = 0;
         // Parameters and every SSA result get a stable stack slot.
         for (const auto& p : f.header.params) {
-            ResultRef r; r.name = p.name;
-            allocateSlot(r, p.type);
+            auto off = slots_.at(p.name);
+            if (isScalarFloat(p.type)) {
+                if (fpReg >= 8) {
+                    unsupported("more than 8 floating-point parameters (stack parameter ABI is not implemented)");
+                }
+                const std::string freg = floatReg(std::to_string(fpReg), p.type);
+                storeFloatResult(freg, p.type, off);
+                ++fpReg;
+            } else if (isIntegerLike(p.type)) {
+                if (intReg < 8) {
+                    const std::string reg = (bitWidth(p.type) <= 32) ? "w" + std::to_string(intReg) : "x" + std::to_string(intReg);
+                    storeSlot(reg, off, bitWidth(p.type) <= 32);
+                    ++intReg;
+                } else {
+                    const std::uint64_t incoming = 16 + (i - intReg - fpReg) * 8; // Penyesuaian offset stack incoming
+                    os() << "    ldr x9, [x29, #" << incoming << "]\n";
+                    storeSlot(is32(p.type) ? "w9" : "x9", off, is32(p.type));
+                }
+            } else {
+                unsupported("unsupported parameter type '" + typeName(p.type) + "'");
+            }
         }
         for (const auto& b : f.blocks)
             for (const auto& i : b.instructions) discoverResult(i);
@@ -1268,9 +1288,9 @@ void emitOne(const FloatCompareInst& x) {
             break;
 
         case MemoryOrdering::SeqCst:
-            unsupported(
-                "atomic.store seq_cst requires a sequential-consistency strategy"
-            );
+            os() << "    dmb ish\n";
+            os() << "    stlr " << valueReg << ", [x10]\n";
+            break;
 
         case MemoryOrdering::Acquire:
         case MemoryOrdering::AcqRel:
