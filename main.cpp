@@ -24,12 +24,13 @@ void printUsage(const char* progName) {
     std::cerr << "Usage:\n"
               << "  " << progName << " <file.cro> -o <output_bin>           # Compile & link via gcc\n"
               << "  " << progName << " <file.cro> -s <output.s>           # Save assembly file only\n"
-              << "  " << progName << " <file.cro> -o -nomain <output_bin>  # Compile & link raw via ld\n";
+              << "  " << progName << " <file.cro> -o -nomain <output_bin>  # Compile & link raw via ld\n"
+              << "  " << progName << " <file.cro> -o -l <output_bin> a b c # Compile & link raw with libraries via ld\n";
 }
 
 
 int main(int argc, char* argv[]) {
-  if (argc < 4) {
+    if (argc < 4) {
         printUsage(argv[0]);
         return 1;
     }
@@ -38,19 +39,38 @@ int main(int argc, char* argv[]) {
     std::string flag = argv[2];
     
     bool rawLdMode = false;
+    bool linkWithLibs = false;
     std::string outputFilename;
+    std::vector<std::string> libraries;
 
     if (flag == "-s") {
         outputFilename = argv[3];
     } else if (flag == "-o") {
-        if (std::string(argv[3]) == "-nomain") {
+        std::string subFlag = argv[3];
+        if (subFlag == "-nomain") {
             if (argc < 5) {
                 std::cerr << "Error: Missing output filename after -nomain\n";
                 return 1;
             }
             rawLdMode = true;
             outputFilename = argv[4];
-        } else {
+        } 
+        else if (subFlag == "-l") {
+            // Format: ./cro main.cro -o -l <output_bin> lib1 lib2 ...
+            if (argc < 6) {
+                std::cerr << "Error: Missing output filename or libraries after -l\n";
+                return 1;
+            }
+            rawLdMode = true;
+            linkWithLibs = true;
+            outputFilename = argv[4];
+            
+            // Ambil argumen sisa sebagai nama library (-la, -lb, dst.)
+            for (int i = 5; i < argc; ++i) {
+                libraries.push_back(argv[i]);
+            }
+        } 
+        else {
             outputFilename = argv[3];
         }
     } else {
@@ -67,22 +87,23 @@ int main(int argc, char* argv[]) {
         std::cerr << e.what() << '\n';
         return 1;
     }
-  Lexer lexer(source, "main.cro");
-  cru::Parser parser(lexer.tokenize());
-  cru::sem::SemanticAnalyzer semantic;
-  auto module = parser.parseModule();
-  if(!semantic.analyze(module)) {
-    for (const auto& msg : semantic.diagnostics()) {
-    std::cerr << msg.location.file << ":"
-              << msg.location.line << ":"
-              << msg.location.column << ": "
-              << msg.message << '\n';
-    }
-    return 0;
-  }
 
-    std::string assembly =
-        cru::codegen::codegenArch(std::move(module));
+    Lexer lexer(source, "main.cro");
+    cru::Parser parser(lexer.tokenize());
+    cru::sem::SemanticAnalyzer semantic;
+    auto module = parser.parseModule();
+    
+    if (!semantic.analyze(module)) {
+        for (const auto& msg : semantic.diagnostics()) {
+            std::cerr << msg.location.file << ":"
+                      << msg.location.line << ":"
+                      << msg.location.column << ": "
+                      << msg.message << '\n';
+        }
+        return 0;
+    }
+
+    std::string assembly = cru::codegen::codegenArch(std::move(module));
 
     if (flag == "-s") {
         std::ofstream outFile(outputFilename);
@@ -95,7 +116,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    // Untuk opsi -o, kita simpan sementara ke file assembly penampung (misal: temp_out.s)
+    // Simpan sementara ke file assembly (.s)
     std::string tempAssemblyFile = "temp_output_cru.s";
     {
         std::ofstream tempFile(tempAssemblyFile);
@@ -103,18 +124,31 @@ int main(int argc, char* argv[]) {
     }
 
     std::string compileCommand;
-    if (rawLdMode) {
-        // Menggunakan assembler (as) lalu linker murni (ld) tanpa runtime startup gcc
-        std::string tempObjFile = "temp_output_cru.o";
+    std::string tempObjFile = "temp_output_cru.o";
+
+    if (linkWithLibs) {
+        // Gabungkan library menjadi format flag ld (misal: -la -lb -lc)
+        std::string libFlags = "";
+        for (const auto& lib : libraries) {
+            libFlags += " -l" + lib;
+        }
+
+        // Jalankan assembler (as) lalu linker (ld) dengan menyertakan library eksternal
+        compileCommand = "as " + tempAssemblyFile + " -o " + tempObjFile + 
+                         " && ld " + tempObjFile + " -o " + outputFilename + 
+                         libFlags + " && rm " + tempObjFile;
+    } 
+    else if (rawLdMode) {
         compileCommand = "as " + tempAssemblyFile + " -o " + tempObjFile + 
                          " && ld " + tempObjFile + " -o " + outputFilename + 
                          " && rm " + tempObjFile;
-    } else {
-        // Menggunakan gcc untuk otomatis menangani crt0, libc, dll.
+    } 
+    else {
+        // Catatan: Pada kode asli Anda bagian else menggunakan 'as' (mungkin maksudnya 'gcc' untuk mode standar)
         compileCommand = "as " + tempAssemblyFile + " -o " + outputFilename;
     }
 
-    // Eksekusi perintah sistem (as/ld/gcc)
+    // Eksekusi perintah sistem
     int result = std::system(compileCommand.c_str());
     
     // Hapus file assembly sementara
@@ -127,5 +161,4 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Successfully compiled to executable: " << outputFilename << '\n';
     return 0;
-
 }
