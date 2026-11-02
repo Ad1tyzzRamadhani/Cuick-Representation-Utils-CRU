@@ -391,7 +391,8 @@ std::string getOrCreateStringLabel(const std::string& text) {
         unsigned intReg = 0;
         unsigned fpReg = 0;
         // Parameters and every SSA result get a stable stack slot.
-        for (const auto& p : f.header.params) {
+        for (std::size_t i = 0; i < f.header.params.size(); ++i) {
+            const auto& p = f.header.params[i];
             auto off = slots_.at(p.name);
             if (isScalarFloat(p.type)) {
                 if (fpReg >= 8) {
