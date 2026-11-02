@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Assembler: as file.s -o file.o
-        std::string assembleCmd = "gcc " + tempAsmFile + " -o " + tempObjFile;
+        std::string assembleCmd = "as " + tempAsmFile + " -o " + tempObjFile;
         int assembleResult = std::system(assembleCmd.c_str());
         
         // Hapus file assembly sementara
