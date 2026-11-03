@@ -2416,12 +2416,12 @@ private:
     void expectDotIdentifier(
         const std::string& value
     ) {
-        expect(
+        /*expect(
             TokenType::DOT,
             "Expected '.' before '" +
             value +
             "'"
-        );
+        );*/
 
         if (
             peek().value != value
@@ -2476,10 +2476,10 @@ private:
     }
 
     ast::Type parseDottedFloatType() {
-        expect(
+        /*expect(
             TokenType::DOT,
             "Expected '.' before float type"
-        );
+        );*/
 
         return parseFloatType();
     }
