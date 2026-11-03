@@ -23,6 +23,14 @@ namespace fs = std::filesystem;
 #define COLOR_RED     "\033[31m"
 #define COLOR_MAGENTA "\033[35m"
 
+// Helper function untuk menggantikan ends_with (kompatibel C++17 ke bawah)
+bool hasEnding(const std::string& fullString, const std::string& ending) {
+    if (fullString.length() >= ending.length()) {
+        return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+    }
+    return false;
+}
+
 std::string readFile(const fs::path& path) {
     std::ifstream file(path);
     if (!file) {
@@ -101,7 +109,7 @@ int main(int argc, char* argv[]) {
             std::cerr << COLOR_RED << "Error: Flag -s only supports a single input file.\n" << COLOR_RESET;
             return 1;
         }
-        if (!inputFiles[0].ends_with(".cro")) {
+        if (!hasEnding(inputFiles[0], ".cro")) {
             std::cerr << COLOR_RED << "Error: Input file for -s must be a .cro file.\n" << COLOR_RESET;
             return 1;
         }
@@ -113,12 +121,12 @@ int main(int argc, char* argv[]) {
     for (std::size_t i = 0; i < inputFiles.size(); ++i) {
         const auto& file = inputFiles[i];
 
-        if (file.ends_with(".o")) {
+        if (hasEnding(file, ".o")) {
             // Jika filenya sudah berupa binary object (.o), langsung tampung untuk dilink
             objectFilesToLink.push_back(file);
             std::cout << COLOR_GREEN << "[PASS] " << COLOR_RESET << "Using precompiled object: " << file << "\n";
         } 
-        else if (file.ends_with(".cro")) {
+        else if (hasEnding(file, ".cro")) {
             std::cout << COLOR_YELLOW << "[BUILD] " << COLOR_RESET << "Processing CRU source: " << file << "\n";
             
             // 1. Baca source code .cro
@@ -167,11 +175,11 @@ int main(int argc, char* argv[]) {
             std::string targetObjFile;
 
             if (compileOnly && inputFiles.size() == 1) {
-                // Jika cuma 1 file dengan -cr, output .o mengikuti nama outputFilename
                 targetObjFile = outputFilename;
             } else {
-                // Jika banyak file atau mode link, gunakan nama objek sementara berbasis nama file asalnya
-                targetObjFile = file.substr(0, file.find_rfind('.')) + ".o";
+                std::size_t dotIdx = file.rfind('.');
+                std::string baseName = (dotIdx == std::string::npos) ? file : file.substr(0, dotIdx);
+                targetObjFile = baseName + ".o";
             }
 
             {
