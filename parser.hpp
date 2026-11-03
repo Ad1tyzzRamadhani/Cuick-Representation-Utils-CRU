@@ -2458,19 +2458,19 @@ private:
     // =========================================================
 
     ast::Type parseDottedType() {
-        expect(
+        /*expect(
             TokenType::DOT,
             "Expected '.' before instruction type"
-        );
+        );*/
 
         return parseType(false);
     }
 
     ast::Type parseDottedIntegerType() {
-        expect(
+        /*expect(
             TokenType::DOT,
             "Expected '.' before integer type"
-        );
+        );*/
 
         return parseIntegerType();
     }
