@@ -42,10 +42,7 @@ std::string readFile(const fs::path& path) {
 }
 
 void printUsage(const char* progName) {
-    std::cout << COLOR_BOLD << COLOR_CYAN << "========================================================\n"
-              << "            CRU COMPILER CLI TOOLCHAIN                  \n"
-              << "========================================================" << COLOR_RESET << "\n\n"
-              << COLOR_BOLD << "USAGE:" << COLOR_RESET << "\n"
+    std::cout << COLOR_BOLD << "USAGE:" << COLOR_RESET << "\n"
               << "  " << COLOR_GREEN << progName << COLOR_RESET << " <files...> " << COLOR_YELLOW << "-o" << COLOR_RESET << " <output>       " << COLOR_MAGENTA << "# Compile & Link (.cro/.o to Executable)" << COLOR_RESET << "\n"
               << "  " << COLOR_GREEN << progName << COLOR_RESET << " " << COLOR_YELLOW << "-cr" << COLOR_RESET << " <files...> " << COLOR_YELLOW << "-o" << COLOR_RESET << " <output.o>   " << COLOR_MAGENTA << "# Compile to Object File(s) only" << COLOR_RESET << "\n"
               << "  " << COLOR_GREEN << progName << COLOR_RESET << " <file.cro> " << COLOR_YELLOW << "-s" << COLOR_RESET << " <output.s>       " << COLOR_MAGENTA << "# Generate Assembly (.s) only" << COLOR_RESET << "\n\n"
@@ -54,7 +51,7 @@ void printUsage(const char* progName) {
               << "  " << progName << " main.o utils.o -o main\n"
               << "  " << progName << " -cr main.cro add.cro -o main.o\n"
               << "  " << progName << " main.cro -s main.s\n"
-              << COLOR_CYAN << "========================================================" << COLOR_RESET << "\n";
+              << COLOR_RESET << "\n";
 }
 
 int main(int argc, char* argv[]) {
