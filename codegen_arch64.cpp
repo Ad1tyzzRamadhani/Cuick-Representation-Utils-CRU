@@ -387,6 +387,9 @@ std::string getOrCreateStringLabel(const std::string& text) {
         currentFunction_ = &f;
         slots_.clear(); valueTypes_.clear(); blockLabels_.clear();
         nextSlot_ = 0;
+        for (const auto& p : f.header.params) {
+            allocateSlot(ResultRef{p.name}, p.type);
+        }
         for (const auto& b : f.blocks) blockLabels_[b.name] = localLabel(b.name);
         unsigned intReg = 0;
         unsigned fpReg = 0;
