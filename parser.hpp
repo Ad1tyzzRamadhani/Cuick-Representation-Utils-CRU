@@ -714,6 +714,34 @@ private:
     // =========================================================
 
     ast::Initializer parseInitializer() {
+        if (check(TokenType::STRING_LITERAL) && peek().type == TokenType::RBRACKET && peek().type == TokenType::LBRACKET) {
+            const Token& strToken = advance();
+            std::string text = strToken.value; // Berisi string beserta tanda petik, cth: "Hello"
+            
+            // Ambil karakter di dalam tanda petik
+            std::string inner = text.substr(1, text.size() - 2);
+            
+            auto array = std::make_shared<ast::ArrayLiteral>();
+            
+            // Masukkan setiap karakter sebagai nilai integer ASCII
+            for (char c : inner) {
+                ast::Literal lit;
+                lit.location = location(strToken);
+                lit.kind = ast::LiteralKind::Integer;
+                lit.text = std::to_string(static_cast<uint8_t>(c));
+                array->elements.push_back(ast::Initializer{lit});
+            }
+            
+            // Otomatis tambahkan null-terminator (0) di akhir string
+            ast::Literal nullLit;
+            nullLit.location = location(strToken);
+            nullLit.kind = ast::LiteralKind::Integer;
+            nullLit.text = "0";
+            array->elements.push_back(ast::Initializer{nullLit});
+
+            return ast::Initializer{std::move(array)};
+        }
+
         if (!match(TokenType::LBRACKET)) {
             return ast::Initializer{parseLiteral()};
         }
