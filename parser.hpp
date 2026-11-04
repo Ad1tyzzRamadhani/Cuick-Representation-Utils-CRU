@@ -1339,7 +1339,6 @@ private:
         node.op =
             parseCompareOp(opToken);
 
-        expect(TokenType::DOT, "Expected '.' before comparison type");
         if (match(TokenType::TYPE_PTR)) {
             node.type = ast::Type(ast::TypeKind::Ptr);
         } else {
