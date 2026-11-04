@@ -1397,11 +1397,6 @@ private:
         node.result =
             std::move(result);
 
-        expect(
-            TokenType::DOT,
-            "Expected '.' before float comparison operator"
-        );
-
         node.op =
             parseCompareOp(
                 parseFloatCompareOperator()
@@ -1745,10 +1740,6 @@ private:
         /*
          * elem.addr.Type
          */
-        expect(
-            TokenType::DOT,
-            "Expected '.' before element type"
-        );
 
         ast::ElementAddrInst node;
 
@@ -1894,10 +1885,6 @@ private:
     }
 
     ast::Type parseCallReturnType() {
-        expect(
-            TokenType::DOT,
-            "Expected '.' before call return type"
-        );
 
         if (match(TokenType::TYPE_VOID))
             return ast::Type(
@@ -2088,11 +2075,6 @@ private:
         node.op =
             parseRMWOp();
 
-        expect(
-            TokenType::DOT,
-            "Expected '.' before atomic RMW type"
-        );
-
         node.type =
             parseIntegerType();
 
@@ -2151,10 +2133,7 @@ private:
         /*
          * atomic.cas.i32
          */
-        expect(
-            TokenType::DOT,
-            "Expected '.' before atomic CAS type"
-        );
+        
 
         node.type =
             parseIntegerType();
