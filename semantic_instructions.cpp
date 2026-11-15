@@ -301,12 +301,19 @@ std::visit(
             case ast::BinaryOp::And:
             case ast::BinaryOp::Or:
             case ast::BinaryOp::Xor:
+                if (!isInteger(node.type) && !isBoolean(node.type)) {
+                    report(
+                        node.location,
+                        "Logical/Bitwise operation requires an integer or boolean type"
+                    );
+                }
+                break;
             case ast::BinaryOp::Shl:
             case ast::BinaryOp::Shr:
                 checkIntegerType(
                     node.type,
                     node.location,
-                    "Bitwise operation"
+                    "Bitwise shift operation"
                 );
                 break;
 
