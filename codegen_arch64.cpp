@@ -267,7 +267,7 @@ public:
                 std::cerr << "[STRUCT-DBG] add StructDecl name=\"" << p->name
                           << "\" (len=" << p->name.size() << "), fields=" << p->fields.size() << "\n";
                 layouts_.structs[p->name] = p;
-            else if (auto p = std::get_if<UnionDecl>(&d)) layouts_.unions[p->name] = p;
+            } else if (auto p = std::get_if<UnionDecl>(&d)) layouts_.unions[p->name] = p;
         }
         for (const auto& d : module_.declarations) {
             if (auto f = std::get_if<Function>(&d)) {
