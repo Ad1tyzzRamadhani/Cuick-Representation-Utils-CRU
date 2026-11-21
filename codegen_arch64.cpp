@@ -201,7 +201,7 @@ std::uint64_t fieldOffset(
 }
 };
 
-unsigned bitWidth(const Type& t) {
+unsigned bitWidth(const Type& t, const LayoutEngine& layouts) {
     LayoutEngine layout;
     switch (t.kind) {
     case TypeKind::I8: case TypeKind::U8: return 8;
@@ -211,7 +211,7 @@ unsigned bitWidth(const Type& t) {
     case TypeKind::USize: case TypeKind::F64: case TypeKind::Ptr: return 64;
     case TypeKind::Bool: return 32;
     case TypeKind::Named: {
-        auto l = layout.layout(t);
+        auto l = layouts.layout(t);
         return static_cast<unsigned>(l.size * 8);
     }
     default: unsupported("bit width for type " + typeName(t));
