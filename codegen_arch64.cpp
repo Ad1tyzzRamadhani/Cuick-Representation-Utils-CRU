@@ -521,6 +521,27 @@ if (frameSize_ > 32760) {
                t.kind == TypeKind::Bool;
     }
 
+    void emitMemCopy(const std::string& dstReg, const std::string& srcReg, std::uint64_t size) {
+    if (size == 0) return;
+
+    const std::string loopLabel = localLabel("memcpy_loop_" + std::to_string(nextSlot_++));
+    const std::string doneLabel = localLabel("memcpy_done_" + std::to_string(nextSlot_++));
+
+    // x11 = src cursor, x12 = dst cursor, x13 = remaining bytes
+    os() << "    mov x11, " << srcReg << "\n";
+    os() << "    mov x12, " << dstReg << "\n";
+    emitMoveImmediate("x13", size);
+
+    os() << loopLabel << ":\n";
+    os() << "    cbz x13, " << doneLabel << "\n";
+    os() << "    ldrb w14, [x11], #1\n";
+    os() << "    strb w14, [x12], #1\n";
+    os() << "    sub x13, x13, #1\n";
+    os() << "    b " << loopLabel << "\n";
+    os() << doneLabel << ":\n";
+}
+
+
 Type inferOperandType(const Operand& op) {
     if (const auto* r = std::get_if<ResultRef>(&op)) {
         auto it = valueTypes_.find(r->name);
@@ -1103,6 +1124,11 @@ void emitOne(const FloatCompareInst& x) {
         case TypeKind::Ptr:
         os() << "    ldr x9, [x10]\n";
         break;
+        case TypeKind::Array:
+        os() << "    mov x9, x10\n";
+        storeSlot("x9", slots_.at(x.result.name));
+        return;
+
 
         default:
         unsupported("load for type " + typeName(x.type));
@@ -1119,6 +1145,14 @@ void emitOne(const FloatCompareInst& x) {
     if (layout.size == 0) {
         unsupported("store for empty or unsupported type " + typeName(x.type));
     }
+
+    if (x.type.kind == TypeKind::Array || x.type.kind == TypeKind::Named) {
+    loadOperand(x.value, "x9", Type(TypeKind::Ptr));
+    loadOperand(x.address, "x10", Type(TypeKind::Ptr));
+    emitMemCopy("x10", "x9", layout.size);
+    return;
+    }
+
 
     // x9 = nilai yang akan disimpan.
     const bool narrow = bitWidth(x.type, layouts_) <= 32;
