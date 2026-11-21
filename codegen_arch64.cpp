@@ -201,8 +201,7 @@ std::uint64_t fieldOffset(
 }
 };
 
-unsigned bitWidth(const Type& t) {
-    LayoutEngine layout;
+unsigned bitWidth(const Type& t, const LayoutEngine& layouts) {
     switch (t.kind) {
     case TypeKind::I8: case TypeKind::U8: return 8;
     case TypeKind::I16: case TypeKind::U16: return 16;
@@ -211,7 +210,7 @@ unsigned bitWidth(const Type& t) {
     case TypeKind::USize: case TypeKind::F64: case TypeKind::Ptr: return 64;
     case TypeKind::Bool: return 32;
     case TypeKind::Named: {
-        auto l = layout.layout(t);
+        auto l = layouts.layout(t);
         return static_cast<unsigned>(l.size * 8);
     }
     default: unsupported("bit width for type " + typeName(t));
@@ -411,8 +410,8 @@ std::string getOrCreateStringLabel(const std::string& text) {
                 ++fpReg;
             } else if (isIntegerLike(p.type)) {
                 if (intReg < 8) {
-                    const std::string reg = (bitWidth(p.type) <= 32) ? "w" + std::to_string(intReg) : "x" + std::to_string(intReg);
-                    storeSlot(reg, off, bitWidth(p.type) <= 32);
+                    const std::string reg = (bitWidth(p.type, layouts_) <= 32) ? "w" + std::to_string(intReg) : "x" + std::to_string(intReg);
+                    storeSlot(reg, off, bitWidth(p.type, layouts_) <= 32);
                     ++intReg;
                 } else {
                     const std::uint64_t incoming = 16 + (i - intReg - fpReg) * 8; // Penyesuaian offset stack incoming
@@ -490,8 +489,8 @@ if (frameSize_ > 32760) {
                 unsupported("non-integer parameter '" + p.name + "' (floating-point ABI is not implemented yet)");
             auto off = slots_.at(p.name);
             if (i < 8) {
-                const std::string reg = (bitWidth(p.type) <= 32) ? "w" + std::to_string(i) : "x" + std::to_string(i);
-                storeSlot(reg, off, bitWidth(p.type) <= 32);
+                const std::string reg = (bitWidth(p.type, layouts_) <= 32) ? "w" + std::to_string(i) : "x" + std::to_string(i);
+                storeSlot(reg, off, bitWidth(p.type, layouts_) <= 32);
             } else {
                 const std::uint64_t incoming = 16 + (i - 8) * 8;
                 os() << "    ldr x9, [x29, #" << incoming << "]\n";
@@ -742,7 +741,7 @@ void emitCallArguments(const std::vector<Operand>& arguments) {
             }
 
             const std::string reg =
-                (bitWidth(type) <= 32 ? "w" : "x") +
+                (bitWidth(type, layouts_) <= 32 ? "w" : "x") +
                 std::to_string(intReg);
 
             loadOperand(arg, reg, type);
@@ -1003,8 +1002,8 @@ void emitOne(const FloatCompareInst& x) {
     if (isIntegerLike(src) && isIntegerLike(dst)) {
         loadOperand(x.operand, "x9", src);
 
-        const unsigned srcBits = bitWidth(src);
-        const unsigned dstBits = bitWidth(dst);
+        const unsigned srcBits = bitWidth(src, layouts_);
+        const unsigned dstBits = bitWidth(dst, layouts_);
 
         if (dstBits < 64) {
             const std::uint64_t mask = (std::uint64_t(1) << dstBits) - 1;
@@ -1111,7 +1110,7 @@ void emitOne(const FloatCompareInst& x) {
 
     // Simpan hasil pembacaan ke slot SSA.
         storeSlot(
-        bitWidth(x.type) <= 32 ? "w9" : "x9",
+        bitWidth(x.type, layouts_) <= 32 ? "w9" : "x9",
         slots_.at(x.result.name)
         );
 }
@@ -1122,7 +1121,7 @@ void emitOne(const FloatCompareInst& x) {
     }
 
     // x9 = nilai yang akan disimpan.
-    const bool narrow = bitWidth(x.type) <= 32;
+    const bool narrow = bitWidth(x.type, layouts_) <= 32;
     loadOperand(
         x.value,
         narrow ? "w9" : "x9",
