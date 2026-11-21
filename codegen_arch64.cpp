@@ -1244,7 +1244,7 @@ void emitOne(const FloatCompareInst& x) {
         if (!isIntegerLike(x.type))
             unsupported("atomic.load for type " + typeName(x.type));
 
-        const unsigned width = bitWidth(x.type);
+        const unsigned width = bitWidth(x.type, layouts_);
 
         if (width != 32 && width != 64)
             unsupported("atomic.load currently supports only 32-bit and 64-bit integers");
@@ -1274,7 +1274,7 @@ void emitOne(const FloatCompareInst& x) {
         if (!isIntegerLike(x.type))
             unsupported("atomic.store for type " + typeName(x.type));
 
-        const unsigned width = bitWidth(x.type);
+        const unsigned width = bitWidth(x.type, layouts_);
 
         if (width != 32 && width != 64)
             unsupported(
@@ -1312,7 +1312,7 @@ void emitOne(const FloatCompareInst& x) {
         unsupported("atomic.rmw for type " + typeName(x.type));
     }
 
-    const unsigned width = bitWidth(x.type);
+    const unsigned width = bitWidth(x.type, layouts_);
 
     if (width != 32 && width != 64) {
         unsupported(
@@ -1425,7 +1425,7 @@ void emitOne(const FloatCompareInst& x) {
         unsupported("atomic.cas for type " + typeName(x.type));
     }
 
-    const unsigned width = bitWidth(x.type);
+    const unsigned width = bitWidth(x.type, layouts_);
 
     if (width != 32 && width != 64) {
         unsupported(
