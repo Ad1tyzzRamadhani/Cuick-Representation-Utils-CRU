@@ -64,6 +64,7 @@ bool isIntegerLike(const Type& t) {
     case TypeKind::I64: case TypeKind::U8: case TypeKind::U16:
     case TypeKind::U32: case TypeKind::U64: case TypeKind::ISize:
     case TypeKind::USize: case TypeKind::Bool: case TypeKind::Ptr:
+    case TypeKind::Array:
         return true;
     default:
         return false;
@@ -309,6 +310,7 @@ private:
     const Function* currentFunction_ = nullptr;
     std::uint64_t frameSize_ = 0;
     std::uint64_t nextSlot_ = 0;
+    std::uint64_t labelSeq_ = 0;
 
     std::ostream& os() { return current_ ? *current_ : out_; }
 
@@ -521,11 +523,13 @@ if (frameSize_ > 32760) {
                t.kind == TypeKind::Bool;
     }
 
-    void emitMemCopy(const std::string& dstReg, const std::string& srcReg, std::uint64_t size) {
+void emitMemCopy(const std::string& dstReg, const std::string& srcReg, std::uint64_t size) {
     if (size == 0) return;
 
-    const std::string loopLabel = localLabel("memcpy_loop_" + std::to_string(nextSlot_++));
-    const std::string doneLabel = localLabel("memcpy_done_" + std::to_string(nextSlot_++));
+    const std::uint64_t id = labelSeq_++;
+    const std::string loopLabel = localLabel("memcpy_loop_" + std::to_string(id));
+    const std::string doneLabel = localLabel("memcpy_done_" + std::to_string(id));
+
 
     // x11 = src cursor, x12 = dst cursor, x13 = remaining bytes
     os() << "    mov x11, " << srcReg << "\n";
@@ -547,6 +551,9 @@ Type inferOperandType(const Operand& op) {
         auto it = valueTypes_.find(r->name);
         if (it == valueTypes_.end()) {
             unsupported("unknown SSA value %" + r->name);
+        }
+        if (it->second.kind == TypeKind::Array) {
+            return Type(TypeKind::Ptr);
         }
         return it->second;
     }
