@@ -99,6 +99,8 @@ struct LayoutEngine {
             return {e.size * t.arraySize, e.alignment};
         }
         case TypeKind::Named: {
+            std::cerr << "[STRUCT-DBG] layout() lookup name=\"" << t.name
+                      << "\" (len=" << t.name.size() << ")\n";
             auto si = structs.find(t.name);
             if (si != structs.end()) {
                 const auto& s = *si->second;
@@ -261,7 +263,10 @@ class Generator {
 public:
     explicit Generator(Module module) : module_(std::move(module)) {
         for (const auto& d : module_.declarations) {
-            if (auto p = std::get_if<StructDecl>(&d)) layouts_.structs[p->name] = p;
+            if (auto p = std::get_if<StructDecl>(&d)) { 
+                std::cerr << "[STRUCT-DBG] add StructDecl name=\"" << p->name
+                          << "\" (len=" << p->name.size() << "), fields=" << p->fields.size() << "\n";
+                layouts_.structs[p->name] = p;
             else if (auto p = std::get_if<UnionDecl>(&d)) layouts_.unions[p->name] = p;
         }
         for (const auto& d : module_.declarations) {
@@ -274,7 +279,7 @@ public:
             }
         }
     }
-
+   
     std::string run() {
         out_ << ".text\n";
         for (const auto& d : module_.declarations) {
