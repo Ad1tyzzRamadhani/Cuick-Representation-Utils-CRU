@@ -1089,9 +1089,14 @@ void emitOne(const FloatCompareInst& x) {
         storeSlot("x9", slots_.at(x.result.name));
     }
     void emitOne(const LoadInst& x) {
-        if (!isIntegerLike(x.type)) {
+        const bool isAggregate =
+        x.type.kind == TypeKind::Array ||
+        isStructType(x.type, layouts_) ||
+        (x.type.kind == TypeKind::Named && layouts_.unions.count(x.type.name) > 0);
+
+    if (!isIntegerLike(x.type) && !isAggregate && !isScalarFloat(x.type)) {
         unsupported("load for type " + typeName(x.type));
-        }
+    }
  
     // x10 = alamat memori yang akan dibaca.
         loadOperand(
@@ -1099,6 +1104,19 @@ void emitOne(const FloatCompareInst& x) {
         "x10",
         Type(TypeKind::Ptr)
         );
+
+        if (isAggregate) {
+        os() << "    mov x9, x10\n";
+        storeSlot("x9", slots_.at(x.result.name));
+        return;
+    }
+
+    if (isScalarFloat(x.type)) {
+        const std::string freg = floatReg("0", x.type);
+        os() << "    ldr " << freg << ", [x10]\n";
+        storeFloatResult(freg, x.type, slots_.at(x.result.name));
+        return;
+    }
 
     // Muat data sesuai ukuran dan signedness tipe.
         switch (x.type.kind) {
